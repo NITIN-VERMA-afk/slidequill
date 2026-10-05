@@ -15,13 +15,13 @@ import { hashToken } from "./cookies";
 
 // ─── Env validation (fail fast) ──────────────────────────────────────────────
 
-const SECRET_RAW = process.env.JWT_SECRET;
-if (!SECRET_RAW || SECRET_RAW.length < 32) {
-  throw new Error(
-    "[auth] JWT_SECRET env var must be set and at least 32 characters."
-  );
+function getSecret() {
+  const SECRET_RAW = process.env.JWT_SECRET;
+  if (!SECRET_RAW || SECRET_RAW.length < 32) {
+    throw new Error("[auth] JWT_SECRET env var must be set and at least 32 characters.");
+  }
+  return new TextEncoder().encode(SECRET_RAW);
 }
-const SECRET = new TextEncoder().encode(SECRET_RAW);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ export async function signAccessToken(
     .setSubject(userId)
     .setIssuedAt()
     .setExpirationTime("15m")
-    .sign(SECRET);
+    .sign(getSecret());
 }
 
 /** Verify an access token. Returns the payload or null on any error. */
@@ -59,7 +59,7 @@ export async function verifyAccessToken(
   token: string
 ): Promise<AccessTokenPayload | null> {
   try {
-    const { payload } = await jwtVerify<AccessTokenPayload>(token, SECRET);
+    const { payload } = await jwtVerify<AccessTokenPayload>(token, getSecret());
     return payload;
   } catch {
     return null;
