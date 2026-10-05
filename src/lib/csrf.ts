@@ -23,7 +23,8 @@ export function checkOrigin(req: NextRequest): NextResponse | null {
     ? new URL(referer).origin
     : null;
 
-  if (requestOrigin !== allowed) {
+  // Allow if it matches APP_URL or the actual request host (for Vercel previews)
+  if (requestOrigin !== allowed && requestOrigin !== req.nextUrl.origin) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
