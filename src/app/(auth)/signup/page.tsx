@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 const schema = z
   .object({
@@ -32,6 +33,8 @@ export default function SignupPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -91,8 +94,9 @@ export default function SignupPage() {
           {/* Logo */}
           <Link
             href="/"
-            className="text-2xl font-extrabold tracking-tight text-white [font-family:var(--font-display)]"
+            className="flex items-center gap-3 text-2xl font-extrabold tracking-tight text-white [font-family:var(--font-display)]"
           >
+            <Image src="/logo-icon.png" alt="SlideQuill" width={40} height={40} className="shrink-0 rounded-sm" />
             Slidequill
           </Link>
 
@@ -152,8 +156,9 @@ export default function SignupPage() {
         {/* Mobile logo */}
         <Link
           href="/"
-          className="mb-8 text-xl font-extrabold tracking-tight text-[#101A3A] [font-family:var(--font-display)] lg:hidden"
+          className="mb-8 flex items-center gap-2 text-xl font-extrabold tracking-tight text-[#101A3A] [font-family:var(--font-display)] lg:hidden"
         >
+          <Image src="/logo-icon.png" alt="SlideQuill" width={32} height={32} className="shrink-0 rounded-sm" />
           Slidequill
         </Link>
 
@@ -218,14 +223,24 @@ export default function SignupPage() {
               <label htmlFor="signup-password" className="text-sm font-semibold text-[#101A3A]">
                 Password
               </label>
-              <input
-                id="signup-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-                {...register("password")}
-                className="w-full rounded-xl border border-[#101A3A]/15 bg-white px-4 py-3 text-sm text-[#101A3A] placeholder:text-[#9aa3bf] shadow-sm outline-none transition focus:border-[#2F5BFF] focus:ring-3 focus:ring-[#2F5BFF]/15"
-              />
+              <div className="relative">
+                <input
+                  id="signup-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  {...register("password")}
+                  className="w-full rounded-xl border border-[#101A3A]/15 bg-white px-4 py-3 pr-10 text-sm text-[#101A3A] placeholder:text-[#9aa3bf] shadow-sm outline-none transition focus:border-[#2F5BFF] focus:ring-3 focus:ring-[#2F5BFF]/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9aa3bf] hover:text-[#101A3A] transition"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {/* Strength bar */}
               {password.length > 0 && (
                 <div className="flex items-center gap-2 mt-1">
@@ -256,14 +271,24 @@ export default function SignupPage() {
               <label htmlFor="signup-confirm" className="text-sm font-semibold text-[#101A3A]">
                 Confirm password
               </label>
-              <input
-                id="signup-confirm"
-                type="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                {...register("confirmPassword")}
-                className="w-full rounded-xl border border-[#101A3A]/15 bg-white px-4 py-3 text-sm text-[#101A3A] placeholder:text-[#9aa3bf] shadow-sm outline-none transition focus:border-[#2F5BFF] focus:ring-3 focus:ring-[#2F5BFF]/15"
-              />
+              <div className="relative">
+                <input
+                  id="signup-confirm"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  {...register("confirmPassword")}
+                  className="w-full rounded-xl border border-[#101A3A]/15 bg-white px-4 py-3 pr-10 text-sm text-[#101A3A] placeholder:text-[#9aa3bf] shadow-sm outline-none transition focus:border-[#2F5BFF] focus:ring-3 focus:ring-[#2F5BFF]/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9aa3bf] hover:text-[#101A3A] transition"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="flex items-center gap-1 text-xs text-red-500">
                   <span>⚠</span> {errors.confirmPassword.message}

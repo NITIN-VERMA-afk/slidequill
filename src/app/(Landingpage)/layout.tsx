@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
  
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-display" });
@@ -8,7 +9,10 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
   return (
     <div className={`${display.variable} ${body.variable} min-h-screen bg-[#F4F6FB] text-[#101A3A] [font-family:var(--font-body)]`}>
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link href="/" className="text-xl font-extrabold tracking-tight [font-family:var(--font-display)]">Slidequill</Link>
+        <Link href="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight [font-family:var(--font-display)]">
+          <Image src="/logo-icon.png" alt="SlideQuill" width={32} height={32} className="shrink-0 rounded-sm" />
+          Slidequill
+        </Link>
         <nav className="flex items-center gap-6 text-sm">
           <a href="/#pricing" className="hidden hover:underline sm:inline">Pricing</a>
           <a href="/#faq" className="hidden hover:underline sm:inline">FAQ</a>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -121,14 +122,13 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
     >
       {/* Logo + collapse toggle */}
       <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-        {(!collapsed || isMobile) && (
-          <Link
-            href="/dashboard"
-            className="text-lg font-extrabold tracking-tight [font-family:var(--font-display)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F5BFF]"
-          >
-            Slidequill
-          </Link>
-        )}
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 text-lg font-extrabold tracking-tight [font-family:var(--font-display)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F5BFF]"
+        >
+          <Image src="/logo-icon.png" alt="SlideQuill" width={28} height={28} className="shrink-0 rounded-sm" />
+          {(!collapsed || isMobile) && <span>Slidequill</span>}
+        </Link>
         {!isMobile && (
           <button
             onClick={toggleCollapsed}
