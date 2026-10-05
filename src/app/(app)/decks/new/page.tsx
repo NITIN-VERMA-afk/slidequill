@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import {
   Upload,
@@ -9,18 +9,22 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
+import { themes, defaultThemeId } from "@/lib/themes";
 
 type Tab = "file" | "text";
 
 const ACCEPTED = ".pdf,.docx";
 const MAX_MB = 10;
 
-export default function NewDeckPage() {
+function NewDeckForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTheme = searchParams.get("theme") ?? defaultThemeId;
   const [tab, setTab] = useState<Tab>("file");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState(initialTheme);
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState<
     "idle" | "uploading" | "redirecting"
@@ -74,12 +78,13 @@ export default function NewDeckPage() {
         const form = new FormData();
         form.append("file", file);
         if (title.trim()) form.append("title", title.trim());
+        form.append("theme", selectedTheme);
         res = await fetch("/api/decks", { method: "POST", body: form });
       } else {
         res = await fetch("/api/decks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: title.trim() || undefined, text }),
+          body: JSON.stringify({ title: title.trim() || undefined, text, theme: selectedTheme }),
         });
       }
 
@@ -131,6 +136,35 @@ export default function NewDeckPage() {
             disabled={busy}
             className="rounded-xl border border-[#101A3A]/15 bg-white px-4 py-3 text-sm text-[#101A3A] placeholder:text-[#9aa3bf] shadow-sm outline-none transition focus:border-[#2F5BFF] focus:ring-2 focus:ring-[#2F5BFF]/15 disabled:opacity-60"
           />
+        </div>
+
+        {/* Theme picker */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-semibold text-[#101A3A]">Theme</label>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {Object.values(themes).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={busy}
+                onClick={() => setSelectedTheme(t.id)}
+                title={t.name}
+                className={clsx(
+                  "flex flex-col items-center gap-1.5 rounded-xl border p-2 text-xs font-medium transition",
+                  selectedTheme === t.id
+                    ? "border-[#2F5BFF] bg-[#2F5BFF]/5 text-[#2F5BFF]"
+                    : "border-[#101A3A]/10 bg-white text-[#5a6384] hover:border-[#2F5BFF]/30"
+                )}
+              >
+                {/* Mini swatch */}
+                <span
+                  className="h-6 w-full rounded-md border border-black/5"
+                  style={{ background: t.colors.bg, borderBottom: `3px solid ${t.colors.accent}` }}
+                />
+                <span className="truncate w-full text-center leading-tight">{t.name.split(" ")[0]}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -254,5 +288,13 @@ export default function NewDeckPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function NewDeckPage() {
+  return (
+    <Suspense>
+      <NewDeckForm />
+    </Suspense>
   );
 }

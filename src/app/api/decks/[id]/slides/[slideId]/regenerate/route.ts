@@ -60,7 +60,7 @@ export async function POST(
     );
   }
 
-  const SYSTEM_PROMPT = `You are a presentation slide editor.
+const SYSTEM_PROMPT = `You are a presentation slide editor.
 The user wants to REGENERATE a slide. Here is the ORIGINAL slide content:
 Title: ${existingSlide.title}
 Layout: ${existingSlide.layout}
@@ -70,7 +70,24 @@ Notes: ${existingSlide.notes}
 ${instruction ? `\nUSER INSTRUCTION FOR REGENERATION:\n"${instruction}"\n` : ""}
 
 Generate a new version of this slide. Keep the same layout unless instructed otherwise.
-Output strictly in JSON matching the exact schema.`;
+Output strictly in JSON matching the exact schema.
+Here is the expected JSON schema:
+{
+  "title": "string (conclusion, not topic)",
+  "notes": "string (1-2 sentences speaker notes)",
+  "layout": "title" | "bullets" | "two_column" | "stats" | "process" | "comparison" | "quote" | "closing",
+  "content": {
+    // fields based on layout type:
+    // title: { "subtitle": "string (optional)" }
+    // bullets: { "bullets": ["string"] }
+    // two_column: { "left": { "heading": "string (optional)", "bullets": ["string"] }, "right": { "heading": "string (optional)", "bullets": ["string"] } }
+    // stats: { "stats": [ { "value": "string", "label": "string" } ] }
+    // process: { "steps": [ { "label": "string", "desc": "string" } ] }
+    // comparison: { "columns": [ { "heading": "string", "bullets": ["string"] } ] }
+    // quote: { "quote": "string", "attribution": "string (optional)" }
+    // closing: { "headline": "string", "cta": "string (optional)" }
+  }
+}`;
 
   try {
     const completion = await openai.chat.completions.create({

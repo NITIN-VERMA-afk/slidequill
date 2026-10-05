@@ -11,12 +11,15 @@ import { getSession } from "@/lib/auth";
 import { extractText } from "@/lib/extract";
 import { getDeckLimiter } from "@/lib/ratelimit";
 
+import { themes, defaultThemeId } from "@/lib/themes";
+
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_TEXT_CHARS = 50_000;
 
 const textSchema = z.object({
   title: z.string().max(200).optional(),
   text: z.string().min(1, "Text is required").max(MAX_TEXT_CHARS),
+  theme: z.string().optional(),
 });
 
 function sanitiseName(name: string): string {
@@ -44,6 +47,7 @@ export async function POST(req: NextRequest) {
   let sourceText: string;
   let sourceName: string;
   let title: string | undefined;
+  let theme: string = defaultThemeId;
 
   // ── File upload path ──────────────────────────────────────────────────────
   if (ct.includes("multipart/form-data")) {
@@ -76,6 +80,8 @@ export async function POST(req: NextRequest) {
     sourceText = result.text;
     sourceName = sanitiseName(file.name);
     title = (form.get("title") as string | null) ?? sourceName;
+    const themeParam = form.get("theme") as string | null;
+    if (themeParam && themes[themeParam]) theme = themeParam;
 
   // ── JSON text path ─────────────────────────────────────────────────────────
   } else {
@@ -97,6 +103,7 @@ export async function POST(req: NextRequest) {
     sourceText = parsed.data.text;
     sourceName = "pasted text";
     title = parsed.data.title;
+    if (parsed.data.theme && themes[parsed.data.theme]) theme = parsed.data.theme;
   }
 
   await connectDB();
@@ -106,6 +113,7 @@ export async function POST(req: NextRequest) {
     sourceText,   // stored, select:false, never returned
     sourceName,
     status: "outlining",
+    theme,
   });
 
   return NextResponse.json({ id: deck._id.toString() }, { status: 201 });
@@ -120,7 +128,7 @@ export async function GET(req: NextRequest) {
 
   await connectDB();
   const decks = await Deck.find({ userId: session.sub })
-    .select("title status sourceName createdAt updatedAt")
+    .select("title status sourceName theme createdAt updatedAt")
     .sort({ createdAt: -1 })
     .lean();
 

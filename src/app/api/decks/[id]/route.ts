@@ -87,3 +87,21 @@ export async function PATCH(
 
   return NextResponse.json({ deck });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session?.sub) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  await connectDB();
+  const result = await Deck.deleteOne({ _id: id, userId: session.sub });
+  if (result.deletedCount === 0) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true });
+}
