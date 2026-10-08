@@ -19,10 +19,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SlideQuill - AI Presentation Generator",
-  description: "Create beautiful, professional presentations in seconds with AI.",
+  title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
+  description: "Turn PDF and Word documents into editable PowerPoint presentations with SlideQuill.",
   icons: {
     icon: "/logo-icon.png",
+  },
+  openGraph: {
+    title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
+    description: "Turn PDF and Word documents into editable PowerPoint presentations with SlideQuill.",
+    images: [{ url: "/logo-icon.png" }],
   },
 };
 

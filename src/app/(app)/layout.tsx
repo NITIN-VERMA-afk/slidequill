@@ -8,6 +8,12 @@ import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { getSessionUser } from "@/lib/auth";
 import AppShell from "@/components/app/AppShell";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
+
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display",

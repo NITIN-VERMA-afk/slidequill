@@ -7,6 +7,7 @@ export interface IUser extends Document {
   name: string;
   role: "user" | "admin";
   credits: number;
+  hasPurchased: boolean;
   emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -25,6 +26,7 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true, trim: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     credits: { type: Number, default: 3 },
+    hasPurchased: { type: Boolean, default: false },
     emailVerified: { type: Boolean, default: false },
   },
   { timestamps: true }

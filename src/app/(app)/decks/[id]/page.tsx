@@ -399,10 +399,43 @@ export default function DeckEditorPage({
 
           {viewMode === "slides" && slides.length > 0 && (
             <button
-              onClick={() => {
-                import("@/lib/export-pptx").then(m => m.exportToPPTX(title, slides as any, theme));
+              onClick={async () => {
+                if (!deckId) return;
+                const btn = document.getElementById("export-btn") as HTMLButtonElement;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Exporting...`;
+                
+                try {
+                  const res = await fetch(`/api/decks/${deckId}/export`);
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || "Failed to export");
+                  }
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  const cd = res.headers.get("Content-Disposition");
+                  let filename = "Presentation.pptx";
+                  if (cd) {
+                    const match = cd.match(/filename="([^"]+)"/);
+                    if (match) filename = match[1];
+                  }
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.URL.revokeObjectURL(url);
+                } catch (err: any) {
+                  alert(err.message || "Failed to export presentation.");
+                } finally {
+                  btn.disabled = false;
+                  btn.innerHTML = originalText;
+                }
               }}
-              className="flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2548cc]"
+              id="export-btn"
+              className="flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2548cc] disabled:opacity-50"
             >
               <Download size={16} /> Download PPTX
             </button>

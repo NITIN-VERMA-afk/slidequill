@@ -5,7 +5,7 @@ import { Redis } from "@upstash/redis";
 // without the env vars (e.g. build-time static analysis).
 let redis: Redis | null = null;
 
-function getRedis(): Redis {
+export function getRedis(): Redis {
   if (!redis) {
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -45,3 +45,22 @@ export function getDeckLimiter() {
     prefix: "sq:rl:deck",
   });
 }
+
+/** 5 exports per minute per user */
+export function getExportLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(5, "1 m"),
+    prefix: "sq:rl:export",
+  });
+}
+
+/** 5 order creations per 10 minutes */
+export function getBillingLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(5, "10 m"),
+    prefix: "sq:rl:billing",
+  });
+}
+

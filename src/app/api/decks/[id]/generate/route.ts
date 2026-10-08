@@ -98,6 +98,11 @@ export async function POST(
     return NextResponse.json({ error: "No outline to generate from." }, { status: 400 });
   }
 
+  const userCheck = await User.findById(session.sub).select("emailVerified hasPurchased").lean();
+  if (userCheck && !userCheck.emailVerified && !userCheck.hasPurchased) {
+    return NextResponse.json({ error: "Please verify your email before generating decks." }, { status: 403 });
+  }
+
   // Deduct credit atomically (only if not already in generating/ready stuck state)
   if (deck.status !== "generating" && deck.status !== "ready") {
     const user = await User.findOneAndUpdate(

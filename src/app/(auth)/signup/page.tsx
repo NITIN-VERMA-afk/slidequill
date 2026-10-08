@@ -15,6 +15,9 @@ const schema = z
     email: z.string().email("Enter a valid email"),
     password: z.string().min(8, "At least 8 characters").max(128),
     confirmPassword: z.string(),
+    agreed: z.boolean().refine((val) => val === true, {
+      message: "You must agree to the Terms and Privacy Policy",
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords don't match",
@@ -304,6 +307,24 @@ export default function SignupPage() {
               </div>
             )}
 
+            {/* Checkbox */}
+            <div className="flex items-start gap-2 pt-2">
+              <input
+                id="signup-agreed"
+                type="checkbox"
+                {...register("agreed")}
+                className="mt-1 shrink-0 rounded border-[#101A3A]/20 text-[#2F5BFF] focus:ring-[#2F5BFF]"
+              />
+              <label htmlFor="signup-agreed" className="text-sm text-[#5a6384]">
+                I agree to the <Link href="/terms" className="underline hover:text-[#101A3A]" target="_blank">Terms</Link> and <Link href="/privacy" className="underline hover:text-[#101A3A]" target="_blank">Privacy Policy</Link>.
+              </label>
+            </div>
+            {errors.agreed && (
+              <p className="flex items-center gap-1 text-xs text-red-500">
+                <span>⚠</span> {errors.agreed.message}
+              </p>
+            )}
+
             {/* Submit */}
             <button
               id="signup-submit"
@@ -326,13 +347,6 @@ export default function SignupPage() {
                 )}
               </span>
             </button>
-
-            <p className="text-center text-xs text-[#9aa3bf]">
-              By signing up you agree to our{" "}
-              <Link href="/terms" className="underline hover:text-[#101A3A]">Terms</Link>{" "}
-              &amp;{" "}
-              <Link href="/privacy" className="underline hover:text-[#101A3A]">Privacy Policy</Link>.
-            </p>
           </form>
 
           <div className="my-6 flex items-center gap-3">

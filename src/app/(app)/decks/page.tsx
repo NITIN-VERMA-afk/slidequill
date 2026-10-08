@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FolderOpen, Plus, Clock, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Clock, CheckCircle2, AlertCircle, Loader2, Trash2, Download } from "lucide-react";
 import { clsx } from "clsx";
 import type { DeckStatus } from "@/app/models/Deck";
 import { themes } from "@/lib/themes";
@@ -29,6 +29,7 @@ export default function DecksPage() {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/decks")
@@ -44,6 +45,37 @@ export default function DecksPage() {
     await fetch(`/api/decks/${id}`, { method: "DELETE" });
     setDecks((prev) => prev.filter((d) => d._id !== id));
     setDeleting(null);
+  };
+
+  const handleDownload = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    setDownloading(id);
+    try {
+      const res = await fetch(`/api/decks/${id}/export`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to export");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cd = res.headers.get("Content-Disposition");
+      let filename = "Presentation.pptx";
+      if (cd) {
+        const match = cd.match(/filename="([^"]+)"/);
+        if (match) filename = match[1];
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || "Failed to export presentation.");
+    } finally {
+      setDownloading(null);
+    }
   };
 
   if (loading) {
@@ -111,15 +143,27 @@ export default function DecksPage() {
                   </div>
                 </Link>
 
-                {/* Delete button */}
-                <button
-                  onClick={(e) => handleDelete(deck._id, e)}
-                  disabled={deleting === deck._id}
-                  className="absolute top-3 right-3 hidden group-hover:flex items-center justify-center h-7 w-7 rounded-lg bg-white border border-red-200 text-red-500 hover:bg-red-50 shadow-sm transition disabled:opacity-50"
-                  title="Delete deck"
-                >
-                  {deleting === deck._id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                </button>
+                {/* Actions */}
+                <div className="absolute top-3 right-3 hidden group-hover:flex items-center gap-1">
+                  {deck.status === "ready" && (
+                    <button
+                      onClick={(e) => handleDownload(deck._id, e)}
+                      disabled={downloading === deck._id}
+                      className="flex items-center justify-center h-7 w-7 rounded-lg bg-white border border-[#101A3A]/10 text-[#2F5BFF] hover:bg-[#F4F6FB] shadow-sm transition disabled:opacity-50"
+                      title="Download PPTX"
+                    >
+                      {downloading === deck._id ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleDelete(deck._id, e)}
+                    disabled={deleting === deck._id}
+                    className="flex items-center justify-center h-7 w-7 rounded-lg bg-white border border-red-200 text-red-500 hover:bg-red-50 shadow-sm transition disabled:opacity-50"
+                    title="Delete deck"
+                  >
+                    {deleting === deck._id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  </button>
+                </div>
               </li>
             );
           })}

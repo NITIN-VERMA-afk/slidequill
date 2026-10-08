@@ -42,6 +42,12 @@ export async function POST(req: NextRequest) {
   }
 
   const { name, email, password } = parsed.data;
+  
+  const disposableDomains = ["mailinator.com", "yopmail.com", "guerrillamail.com", "tempmail.com"];
+  const domain = email.split("@")[1];
+  if (disposableDomains.includes(domain)) {
+    return NextResponse.json({ error: "Disposable email addresses are not allowed." }, { status: 400 });
+  }
 
   await connectDB();
 
@@ -56,6 +62,36 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await User.create({ name, email, passwordHash });
+
+  // Generate verify token
+  const crypto = require("crypto");
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  
+  const AuthToken = require("@/app/models/AuthToken").default;
+  await AuthToken.create({
+    userId: user._id,
+    type: "verify",
+    tokenHash,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+  });
+
+  // Send email
+  const { Resend } = require("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  
+  try {
+    await resend.emails.send({
+      from: emailFrom,
+      to: email,
+      subject: "Verify your email - Slidequill",
+      html: `<p>Click here to verify: <a href="${appUrl}/verify-email?token=${rawToken}">Verify Email</a></p>`
+    });
+  } catch (e) {
+    console.error("Failed to send verify email", e);
+  }
 
   // Issue tokens
   const [accessToken, rawRefresh] = await Promise.all([

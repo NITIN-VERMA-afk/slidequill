@@ -28,6 +28,7 @@ export interface IDeck extends Document {
   userId: Types.ObjectId;
   title: string;
   sourceText: string;
+  sourceExpiresAt?: Date;
   sourceName: string;
   status: DeckStatus;
   theme: string;
@@ -69,6 +70,7 @@ const DeckSchema = new Schema<IDeck>(
     },
     title: { type: String, default: "Untitled deck" },
     sourceText: { type: String, select: false },
+    sourceExpiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
     sourceName: { type: String, default: "" },
     status: {
       type: String,
