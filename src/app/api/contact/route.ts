@@ -4,7 +4,6 @@ import { Resend } from "resend";
 import { Ratelimit } from "@upstash/ratelimit";
 import { getRedis } from "@/lib/ratelimit";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const schema = z.object({
   name: z.string().min(1).max(100),
@@ -24,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!success) {
     return NextResponse.json({ error: "Too many messages. Try again later." }, { status: 429 });
   }
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
