@@ -6,10 +6,6 @@ import { getSession } from "@/lib/auth";
 import { getBillingLimiter } from "@/lib/ratelimit";
 import { PLANS } from "@/lib/plans";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -38,6 +34,11 @@ export async function POST(req: NextRequest) {
   const plan = PLANS[planId];
 
   try {
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+
     const order = await razorpay.orders.create({
       amount: plan.amountPaise,
       currency: "INR",
