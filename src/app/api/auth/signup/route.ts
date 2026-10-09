@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const existing = await User.exists({ email });
   if (existing) {
     return NextResponse.json(
-      { error: "Could not create account. Please try again." },
+      { error: "An account with this email already exists." },
       { status: 409 }
     );
   }
@@ -77,20 +77,25 @@ export async function POST(req: NextRequest) {
   });
 
   // Send email
-  const { Resend } = require("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
-  
-  try {
-    await resend.emails.send({
-      from: emailFrom,
-      to: email,
-      subject: "Verify your email - Slidequill",
-      html: `<p>Click here to verify: <a href="${appUrl}/verify-email?token=${rawToken}">Verify Email</a></p>`
-    });
-  } catch (e) {
-    console.error("Failed to send verify email", e);
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    const { Resend } = require("resend");
+    const resend = new Resend(resendApiKey);
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const emailFrom = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    
+    try {
+      await resend.emails.send({
+        from: emailFrom,
+        to: email,
+        subject: "Verify your email - Slidequill",
+        html: `<p>Click here to verify: <a href="${appUrl}/verify-email?token=${rawToken}">Verify Email</a></p>`
+      });
+    } catch (e) {
+      console.error("Failed to send verify email", e);
+    }
+  } else {
+    console.warn("RESEND_API_KEY is not set. Skipping verification email.");
   }
 
   // Issue tokens
