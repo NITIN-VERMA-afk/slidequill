@@ -14,8 +14,8 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
           Slidequill
         </Link>
         <nav className="flex items-center gap-4 text-sm">
-          <a href="/#pricing" className="hover:underline">Pricing</a>
-          <a href="/#faq" className="hover:underline">FAQ</a>
+          <Link href="/#pricing" className="hover:underline">Pricing</Link>
+          <Link href="/#faq" className="hover:underline">FAQ</Link>
           <Link href="/login" className="rounded-full bg-[#101A3A] px-5 py-2 font-medium text-white hover:bg-[#1d2c5e] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F5BFF]">Log in</Link>
         </nav>
       </header>

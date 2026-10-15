@@ -11,17 +11,25 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+function getSecret() {
+  return new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+}
 
 async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get("sq_at")?.value;
-  if (!token) return false;
-  try {
-    await jwtVerify(token, SECRET);
-    return true;
-  } catch {
-    return false;
+  if (token) {
+    try {
+      await jwtVerify(token, getSecret());
+      return true;
+    } catch {
+      // access token expired, check refresh token
+    }
   }
+  const refreshToken = req.cookies.get("sq_rt")?.value;
+  if (refreshToken) {
+    return true;
+  }
+  return false;
 }
 
 export async function proxy(request: NextRequest) {
@@ -39,7 +47,13 @@ export async function proxy(request: NextRequest) {
   }
 
   // Auth pages → redirect away if already logged in
-  if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/login/" ||
+    pathname === "/signup" ||
+    pathname === "/signup/"
+  ) {
     if (authed) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";

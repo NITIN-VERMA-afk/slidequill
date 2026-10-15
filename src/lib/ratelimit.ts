@@ -64,3 +64,30 @@ export function getBillingLimiter() {
   });
 }
 
+/** 10 signups per 24 hours per IP to prevent free credit farming */
+export function getSignupIpLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(10, "24 h"),
+    prefix: "sq:rl:signup:ip",
+  });
+}
+
+/** 20 deck generations per day per user (default) */
+export function getGenerationLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(20, "24 h"),
+    prefix: "sq:rl:generate",
+  });
+}
+
+/** Tiered generation limiter: 20/day for free users, 100/day for paid users */
+export function getUserGenerationLimiter(hasPurchased: boolean) {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(hasPurchased ? 100 : 20, "24 h"),
+    prefix: hasPurchased ? "sq:rl:generate:paid" : "sq:rl:generate:free",
+  });
+}
+

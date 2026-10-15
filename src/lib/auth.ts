@@ -6,7 +6,7 @@
  * Fail-fast on startup if JWT_SECRET is missing or too short.
  */
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connectDB } from "@/app/lib/db";
 import User, { type IUser } from "@/app/models/User";
@@ -69,15 +69,45 @@ export async function verifyAccessToken(
 // ─── Session resolution (for server components / route handlers) ──────────────
 
 /**
- * Read the sq_at cookie and return the decoded payload.
- * Does NOT hit the database — JWT-only fast path.
- * Returns null if the cookie is absent or invalid.
+ * Read the sq_at cookie or Authorization Bearer header and return the decoded payload.
+ * Fallback to sq_rt refresh token lookup if access token is expired/missing.
+ * Returns null if unauthenticated.
  */
 export async function getSession(): Promise<AccessTokenPayload | null> {
   const jar = await cookies();
   const token = jar.get("sq_at")?.value;
-  if (!token) return null;
-  return verifyAccessToken(token);
+  if (token) {
+    const payload = await verifyAccessToken(token);
+    if (payload) return payload;
+  }
+
+  // Check Authorization: Bearer <token> header for API requests
+  try {
+    const head = await headers();
+    const authHeader = head.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const bearer = authHeader.slice(7).trim();
+      const payload = await verifyAccessToken(bearer);
+      if (payload) return payload;
+    }
+  } catch {
+    // headers() may not be available in non-request contexts
+  }
+
+  // Fallback: check refresh token if sq_at is missing or expired
+  const rawRefresh = jar.get("sq_rt")?.value;
+  if (!rawRefresh) return null;
+  const session = await findSession(rawRefresh);
+  if (!session?.userId) return null;
+
+  await connectDB();
+  const user = (await User.findById(session.userId).select("role").lean()) as IUser | null;
+  if (!user) return null;
+
+  return {
+    sub: session.userId.toString(),
+    role: user.role,
+  };
 }
 
 /**

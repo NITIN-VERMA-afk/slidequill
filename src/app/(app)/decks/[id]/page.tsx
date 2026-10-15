@@ -20,7 +20,11 @@ import {
   Undo2,
   Send,
   Zap,
-  Download
+  Download,
+  Image as ImageIcon,
+  Search,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import type { OutlineSection, ISlide } from "@/app/models/Deck";
 import SlideRenderer from "@/components/app/SlideRenderer";
@@ -36,7 +40,23 @@ interface DeckData {
   outline: OutlineSection[];
   slides: ISlide[];
   error?: string;
+  hasSourceText?: boolean;
+  outlineProgress?: {
+    stage?: string;
+    chunksDone: number;
+    chunksTotal: number;
+    currentPageRange?: string;
+  };
 }
+
+const IMAGE_SUPPORTED_LAYOUTS = [
+  "title",
+  "bullets",
+  "two_column",
+  "quote",
+  "closing",
+  "image",
+];
 
 // ── Debounce hook ──────────────────────────────────────────────────────────────
 
@@ -76,6 +96,44 @@ export default function DeckEditorPage({
   // Edit Tab State
   const [regenInstruction, setRegenInstruction] = useState("");
   const [regenerating, setRegenerating] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageSearchResults, setImageSearchResults] = useState<
+    Array<{
+      url: string;
+      thumb?: string;
+      alt?: string;
+      photographer?: string;
+      photographerUrl?: string;
+      source: string;
+      downloadLocation?: string;
+    }>
+  >([]);
+  const [imageSearching, setImageSearching] = useState(false);
+  const [showImageSearch, setShowImageSearch] = useState(false);
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const [deletingSource, setDeletingSource] = useState(false);
+
+  const handleDeleteSourceText = async () => {
+    if (!deckId) return;
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete the uploaded source document and text from our servers? Your slides and outline will remain intact."
+    );
+    if (!confirmed) return;
+
+    setDeletingSource(true);
+    try {
+      const res = await fetch(`/api/decks/${deckId}/source`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete source text.");
+      }
+      setDeck((prev) => (prev ? { ...prev, hasSourceText: false } : null));
+    } catch (err: any) {
+      alert(err.message || "Failed to delete source text.");
+    } finally {
+      setDeletingSource(false);
+    }
+  };
   
   // Chat Tab State
   const [chatMessages, setChatMessages] = useState<{role: string, content: string, id: string}[]>([]);
@@ -87,6 +145,7 @@ export default function DeckEditorPage({
   useEffect(() => {
     params.then(({ id }) => setDeckId(id));
   }, [params]);
+
 
   // ── Initial load ────────────────────────────────────────────────────────────
 
@@ -147,6 +206,39 @@ export default function DeckEditorPage({
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [deckId, deck?.status, fetchDeck]);
+
+  // ── Resumable Client-Driven Outline Stepper ─────────────────────────────────
+  const drivingOutlineRef = useRef(false);
+
+  useEffect(() => {
+    if (!deckId || !deck || deck.status !== "outlining") {
+      drivingOutlineRef.current = false;
+      return;
+    }
+    if (drivingOutlineRef.current) return;
+
+    drivingOutlineRef.current = true;
+    const driveNextChunk = async () => {
+      try {
+        const res = await fetch(`/api/decks/${deckId}/outline`, { method: "POST" });
+        const data = await res.json();
+        if (data.deck) {
+          setDeck(data.deck);
+          setTitle(data.deck.title);
+          setOutline(data.deck.outline ?? []);
+        } else if (data.status === "outlining" && data.progress) {
+          setDeck((prev) => (prev ? { ...prev, outlineProgress: data.progress } : null));
+        }
+      } catch (err) {
+        console.error("Outline step error:", err);
+      } finally {
+        drivingOutlineRef.current = false;
+      }
+    };
+
+    driveNextChunk();
+  }, [deckId, deck?.status, deck?.outlineProgress?.chunksDone]);
+
 
   // ── Generate slides ──────────────────────────────────────────────────────────
 
@@ -240,6 +332,49 @@ export default function DeckEditorPage({
       alert(err.message || "Failed to regenerate slide.");
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const updateCurrentSlide = async (patch: Partial<ISlide>) => {
+    if (!deckId || !slides[activeSlideIdx]) return;
+    const updated = [...slides];
+    updated[activeSlideIdx] = { ...updated[activeSlideIdx], ...patch } as ISlide;
+    setSlides(updated);
+    setSaveStatus("saving");
+    try {
+      const res = await fetch(`/api/decks/${deckId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slides: updated }),
+      });
+      if (res.ok) {
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 1500);
+      } else {
+        const errData = await res.json().catch(() => null);
+        if (errData?.error) {
+          alert(errData.error);
+        }
+        setSaveStatus("idle");
+      }
+    } catch {
+      setSaveStatus("idle");
+    }
+  };
+
+  const handleSearchImages = async (q: string) => {
+    if (!q.trim()) return;
+    setImageSearching(true);
+    try {
+      const res = await fetch(`/api/images/search?query=${encodeURIComponent(q)}&perPage=6`);
+      const data = await res.json();
+      if (data.images) {
+        setImageSearchResults(data.images);
+      }
+    } catch (err) {
+      console.error("Image search failed:", err);
+    } finally {
+      setImageSearching(false);
     }
   };
 
@@ -363,6 +498,30 @@ export default function DeckEditorPage({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Privacy: Source Text Deletion */}
+          {deck.hasSourceText ? (
+            <button
+              onClick={handleDeleteSourceText}
+              disabled={deletingSource || isOutlining}
+              title="Permanently delete uploaded source document text from server now"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#101A3A]/15 bg-white text-xs font-semibold text-[#5a6384] hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition shadow-sm disabled:opacity-50 mr-2"
+            >
+              {deletingSource ? (
+                <Loader2 size={13} className="animate-spin text-red-500" />
+              ) : (
+                <ShieldCheck size={13} className="text-emerald-600" />
+              )}
+              Delete source text now
+            </button>
+          ) : (
+            <span
+              title="Uploaded document and source text have been permanently deleted"
+              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 mr-2"
+            >
+              <ShieldCheck size={12} className="text-emerald-600" /> Source text deleted
+            </span>
+          )}
+
           {/* View Toggle */}
           {(deck.status === "outlined" || deck.status === "ready" || isGenerating) && (
             <div className="flex bg-[#101A3A]/5 p-1 rounded-lg mr-4">
@@ -447,9 +606,18 @@ export default function DeckEditorPage({
       {isOutlining && (
         <div className="flex items-center gap-3 rounded-xl border border-[#2F5BFF]/20 bg-[#2F5BFF]/5 px-4 py-3 text-sm text-[#2F5BFF] mb-6">
           <Loader2 size={16} className="animate-spin shrink-0" />
-          Generating your outline with AI… this takes about 10 seconds.
+          {deck.outlineProgress && deck.outlineProgress.chunksTotal > 1 ? (
+            <span>
+              Reading pages {deck.outlineProgress.currentPageRange || `chunk ${deck.outlineProgress.chunksDone + 1}`} (chunk{" "}
+              {Math.min(deck.outlineProgress.chunksDone + 1, deck.outlineProgress.chunksTotal)} of{" "}
+              {deck.outlineProgress.chunksTotal})… synthesizing presentation outline.
+            </span>
+          ) : (
+            <span>Generating your outline with AI… this takes about 10 seconds.</span>
+          )}
         </div>
       )}
+
       
       {isFailed && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
@@ -610,9 +778,9 @@ export default function DeckEditorPage({
               {/* Edit Tab */}
               {panelTab === "edit" && (
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
-                  {/* Theme Switcher */}
+                  {/* Template Switcher */}
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] mb-3">Deck Theme</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] mb-3">Template</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {["modern", "corporate", "creative", "dark", "playful", "elegant"].map((t) => (
                         <button
@@ -639,6 +807,239 @@ export default function DeckEditorPage({
                         </p>
                       </div>
                       
+                      {/* Image Controls for Supported Slides */}
+                      {IMAGE_SUPPORTED_LAYOUTS.includes(slides[activeSlideIdx]?.layout) && (() => {
+                        const currentLayout = slides[activeSlideIdx]?.layout;
+                        const imgContent = (slides[activeSlideIdx]?.content || {}) as any;
+                        const currentImgUrl = imgContent.imageUrl || "";
+                        const currentPlacement =
+                          imgContent.imagePlacement ||
+                          (currentLayout === "title" || currentLayout === "closing"
+                            ? "background"
+                            : "right");
+                        const currentVariant = imgContent.variant || "split";
+
+                        return (
+                          <div className="border-t border-[#101A3A]/10 pt-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] flex items-center gap-1.5">
+                                <ImageIcon size={14} /> Slide Image
+                              </h3>
+                              {currentImgUrl && (
+                                currentLayout === "image" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateCurrentSlide({
+                                        content: {
+                                          ...imgContent,
+                                          variant: currentVariant === "full_bleed" ? "split" : "full_bleed",
+                                        },
+                                      })
+                                    }
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#F4F6FB] hover:bg-[#101A3A]/5 text-[#5a6384] transition"
+                                  >
+                                    Style: {currentVariant === "full_bleed" ? "Full-bleed" : "Split"}
+                                  </button>
+                                ) : (currentLayout === "title" || currentLayout === "closing" || currentLayout === "quote") ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateCurrentSlide({
+                                        content: {
+                                          ...imgContent,
+                                          imagePlacement: currentPlacement === "background" ? "right" : "background",
+                                        },
+                                      })
+                                    }
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#F4F6FB] hover:bg-[#101A3A]/5 text-[#5a6384] transition"
+                                  >
+                                    Placement: {currentPlacement === "background" ? "Background" : "Right"}
+                                  </button>
+                                ) : null
+                              )}
+                            </div>
+
+                            {/* Current Image Preview */}
+                            {currentImgUrl ? (
+                              <div className="relative rounded-lg overflow-hidden border border-[#101A3A]/10 mb-3 bg-[#F4F6FB] group">
+                                <img
+                                  src={currentImgUrl}
+                                  alt={imgContent.imageAlt || imgContent.imageQuery || "Slide image"}
+                                  className="w-full h-28 object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setShowImageSearch(true);
+                                      const defaultQuery = imgContent.imageQuery || slides[activeSlideIdx]?.title || "";
+                                      setImageSearchQuery(defaultQuery);
+                                      if (defaultQuery) handleSearchImages(defaultQuery);
+                                    }}
+                                    className="bg-white text-xs font-semibold px-2.5 py-1 rounded shadow text-[#101A3A] hover:bg-[#F4F6FB]"
+                                  >
+                                    Swap
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateCurrentSlide({
+                                        content: {
+                                          ...imgContent,
+                                          imageUrl: "",
+                                          imageQuery: "",
+                                          imagePlacement: "none",
+                                          imageAlt: "",
+                                          imageCaption: "",
+                                          imageCredit: "",
+                                          photographer: "",
+                                          photographerUrl: "",
+                                        },
+                                      })
+                                    }
+                                    className="bg-red-500 text-xs font-semibold px-2 py-1 rounded shadow text-white hover:bg-red-600"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-lg border border-dashed border-[#101A3A]/20 p-4 text-center mb-3">
+                                <p className="text-xs text-[#5a6384] mb-2">No image on this slide</p>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowImageSearch(true);
+                                    const defaultQuery = slides[activeSlideIdx]?.title || "";
+                                    setImageSearchQuery(defaultQuery);
+                                    if (defaultQuery) handleSearchImages(defaultQuery);
+                                  }}
+                                  className="bg-[#2F5BFF] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#2449d6]"
+                                >
+                                  Add Image
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Search / Swap Panel */}
+                            {showImageSearch && (
+                              <div className="rounded-xl border border-[#2F5BFF]/30 bg-[#F4F6FB]/80 p-3 mb-3 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold text-[#101A3A]">Search Stock Photos</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowImageSearch(false)}
+                                    className="text-[#5a6384] hover:text-[#101A3A] p-0.5"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+
+                                <div className="flex gap-1.5">
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. technology, modern office..."
+                                    value={imageSearchQuery}
+                                    onChange={(e) => setImageSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSearchImages(imageSearchQuery);
+                                    }}
+                                    className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-[#101A3A]/15 bg-white outline-none focus:border-[#2F5BFF]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSearchImages(imageSearchQuery)}
+                                    disabled={imageSearching}
+                                    className="px-2.5 py-1.5 bg-[#2F5BFF] text-white rounded-lg text-xs font-semibold hover:bg-[#2449d6] disabled:opacity-50 flex items-center justify-center"
+                                  >
+                                    {imageSearching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
+                                  </button>
+                                </div>
+
+                                {/* Search results */}
+                                {imageSearchResults.length > 0 && (
+                                  <div className="grid grid-cols-3 gap-1.5 mt-1 max-h-40 overflow-y-auto pr-1">
+                                    {imageSearchResults.map((img, i) => (
+                                      <button
+                                        key={i}
+                                        type="button"
+                                        onClick={() => {
+                                          updateCurrentSlide({
+                                            content: {
+                                              ...imgContent,
+                                              imageUrl: img.url,
+                                              imageQuery: imageSearchQuery || img.alt || "",
+                                              imagePlacement:
+                                                currentPlacement === "none"
+                                                  ? (currentLayout === "title" || currentLayout === "closing" ? "background" : "right")
+                                                  : currentPlacement,
+                                              imageAlt: img.alt || "Slide image",
+                                              photographer: img.photographer,
+                                              photographerUrl: img.photographerUrl,
+                                              imageCredit: img.photographer ? `${img.photographer} via ${img.source}` : img.source,
+                                            },
+                                          });
+                                          if (img.downloadLocation) {
+                                            fetch("/api/images/track-download", {
+                                              method: "POST",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ downloadLocation: img.downloadLocation }),
+                                            }).catch(() => {});
+                                          }
+                                          setShowImageSearch(false);
+                                        }}
+                                        className="aspect-video rounded overflow-hidden border border-transparent hover:border-[#2F5BFF] hover:ring-1 hover:ring-[#2F5BFF] transition relative group"
+                                      >
+                                        <img src={img.thumb || img.url} alt={img.alt} className="w-full h-full object-cover" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Custom URL Option */}
+                                <div className="pt-2 border-t border-[#101A3A]/10 flex flex-col gap-1">
+                                  <span className="text-[10px] text-[#5a6384] font-medium">Or paste image URL:</span>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="text"
+                                      placeholder="https://images.unsplash.com/..."
+                                      value={customImageUrl}
+                                      onChange={(e) => setCustomImageUrl(e.target.value)}
+                                      className="flex-1 text-xs px-2 py-1 rounded border border-[#101A3A]/15 bg-white outline-none focus:border-[#2F5BFF]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (customImageUrl.trim()) {
+                                          updateCurrentSlide({
+                                            content: {
+                                              ...imgContent,
+                                              imageUrl: customImageUrl.trim(),
+                                              imagePlacement:
+                                                currentPlacement === "none"
+                                                  ? (currentLayout === "title" || currentLayout === "closing" ? "background" : "right")
+                                                  : currentPlacement,
+                                              imageAlt: "Slide image",
+                                            },
+                                          });
+                                          setCustomImageUrl("");
+                                          setShowImageSearch(false);
+                                        }
+                                      }}
+                                      disabled={!customImageUrl.trim()}
+                                      className="px-2 py-1 bg-[#101A3A] text-white rounded text-xs font-semibold disabled:opacity-40"
+                                    >
+                                      Apply
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       <div className="border-t border-[#101A3A]/10 pt-4">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] mb-2 flex items-center gap-1.5">
                           <Wand2 size={14} /> Regenerate Slide
@@ -675,7 +1076,7 @@ export default function DeckEditorPage({
                       <div className="text-center text-[#5a6384] text-sm mt-4">
                         <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />
                         <p>Ask AI to edit your slides.</p>
-                        <p className="text-xs mt-1 opacity-70">"Add a title slide", "Shorten slide 3", "Change theme to corporate"</p>
+                        <p className="text-xs mt-1 opacity-70">"Add a title slide", "Shorten slide 3", "Change template to corporate"</p>
                       </div>
                     )}
                     {chatMessages.map(m => (

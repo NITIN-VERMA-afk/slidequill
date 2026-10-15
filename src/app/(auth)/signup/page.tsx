@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 const schema = z
@@ -29,7 +29,7 @@ const features = [
   { icon: "📄", text: "Upload PDF, DOCX or paste text" },
   { icon: "✦", text: "AI drafts slides in under a minute" },
   { icon: "⬇︎", text: "Download editable .pptx files" },
-  { icon: "🎨", text: "Apply your own branding & template" },
+  { icon: "🎨", text: "Choose from 6 professional templates" },
 ];
 
 export default function SignupPage() {
@@ -38,6 +38,20 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (active && res.ok) {
+          router.replace("/dashboard");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const {
     register,

@@ -55,7 +55,10 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
 
   // Hydrate collapsed state from localStorage after mount
   useEffect(() => {
-    setCollapsed(readCollapsed());
+    const timer = setTimeout(() => {
+      setCollapsed(readCollapsed());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleCollapsed = () => {

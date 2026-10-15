@@ -5,6 +5,7 @@ import User from "@/app/models/User";
 import { getSession } from "@/lib/auth";
 import { getExportLimiter } from "@/lib/ratelimit";
 import { buildPptx } from "@/lib/export/pptx";
+import { trackEvent } from "@/lib/analytics";
 
 export async function GET(
   req: NextRequest,
@@ -41,6 +42,13 @@ export async function GET(
 
   try {
     const buffer = await buildPptx(deck.title, deck.slides as any[], deck.theme, isFreeUser);
+
+    // Track analytics event
+    void trackEvent("pptx_exported", {
+      userId: session.sub,
+      deckId: id,
+      meta: { isFreeUser, slideCount: (deck.slides || []).length },
+    });
 
     // Sanitize filename
     const safeTitle = (deck.title || "Presentation").replace(/[^a-zA-Z0-9-_\s]/g, "").trim().replace(/\s+/g, "_");

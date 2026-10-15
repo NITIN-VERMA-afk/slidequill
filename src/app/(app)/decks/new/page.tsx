@@ -25,6 +25,7 @@ function NewDeckForm() {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedTheme, setSelectedTheme] = useState(initialTheme);
+  const [includeImages, setIncludeImages] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState<
     "idle" | "uploading" | "redirecting"
@@ -79,13 +80,47 @@ function NewDeckForm() {
         form.append("file", file);
         if (title.trim()) form.append("title", title.trim());
         form.append("theme", selectedTheme);
+        form.append("includeImages", String(includeImages));
         res = await fetch("/api/decks", { method: "POST", body: form });
       } else {
         res = await fetch("/api/decks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: title.trim() || undefined, text, theme: selectedTheme }),
+          body: JSON.stringify({
+            title: title.trim() || undefined,
+            text,
+            theme: selectedTheme,
+            includeImages,
+          }),
         });
+      }
+
+      if (res.status === 401) {
+        const refreshRes = await fetch("/api/auth/refresh", { method: "POST" }).catch(() => null);
+        if (refreshRes && refreshRes.ok) {
+          if (tab === "file" && file) {
+            const form = new FormData();
+            form.append("file", file);
+            if (title.trim()) form.append("title", title.trim());
+            form.append("theme", selectedTheme);
+            form.append("includeImages", String(includeImages));
+            res = await fetch("/api/decks", { method: "POST", body: form });
+          } else {
+            res = await fetch("/api/decks", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: title.trim() || undefined,
+                text,
+                theme: selectedTheme,
+                includeImages,
+              }),
+            });
+          }
+        } else {
+          router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+          return;
+        }
       }
 
       const data = await res.json();
@@ -138,9 +173,9 @@ function NewDeckForm() {
           />
         </div>
 
-        {/* Theme picker */}
+        {/* Template picker */}
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold text-[#101A3A]">Theme</label>
+          <label className="text-sm font-semibold text-[#101A3A]">Template</label>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {Object.values(themes).map((t) => (
               <button
@@ -165,6 +200,26 @@ function NewDeckForm() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Include Images Option */}
+        <div className="flex items-center justify-between rounded-xl border border-[#101A3A]/10 bg-white p-4 shadow-sm">
+          <div className="flex flex-col">
+            <label htmlFor="include-images" className="text-sm font-semibold text-[#101A3A] cursor-pointer">
+              Include stock images
+            </label>
+            <span className="text-xs text-[#5a6384]">
+              Automatically find and add relevant photography to visual slides
+            </span>
+          </div>
+          <input
+            id="include-images"
+            type="checkbox"
+            checked={includeImages}
+            onChange={(e) => setIncludeImages(e.target.checked)}
+            disabled={busy}
+            className="h-5 w-5 rounded border-[#101A3A]/20 text-[#2F5BFF] focus:ring-[#2F5BFF] cursor-pointer"
+          />
         </div>
 
         {/* Tabs */}

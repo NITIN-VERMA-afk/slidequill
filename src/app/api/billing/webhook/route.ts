@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { connectDB } from "@/app/lib/db";
 import Payment from "@/app/models/Payment";
 import User from "@/app/models/User";
+import { trackEvent } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -62,6 +63,16 @@ export async function POST(req: NextRequest) {
             if (res.matchedCount === 0) {
               console.log("Payment captured but user no longer exists", payment.userId);
             }
+
+            // Track analytics event
+            void trackEvent("credit_purchased", {
+              userId: payment.userId.toString(),
+              meta: {
+                credits: payment.credits,
+                amountPaise: payment.amountPaise,
+                paymentId,
+              },
+            });
           }
         }
       }

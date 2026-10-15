@@ -20,13 +20,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
-  description: "Turn PDF and Word documents into editable PowerPoint presentations with SlideQuill.",
+  description: "Turn PDF and Word documents into editable PowerPoint presentations with 6 professionally designed templates on SlideQuill.",
   icons: {
     icon: "/logo-icon.png",
   },
   openGraph: {
     title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
-    description: "Turn PDF and Word documents into editable PowerPoint presentations with SlideQuill.",
+    description: "Turn PDF and Word documents into editable PowerPoint presentations with 6 professionally designed templates on SlideQuill.",
     images: [{ url: "/logo-icon.png" }],
   },
 };

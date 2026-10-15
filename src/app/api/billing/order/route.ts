@@ -5,6 +5,7 @@ import Payment from "@/app/models/Payment";
 import { getSession } from "@/lib/auth";
 import { getBillingLimiter } from "@/lib/ratelimit";
 import { PLANS } from "@/lib/plans";
+import { trackEvent } from "@/lib/analytics";
 
 
 export async function POST(req: NextRequest) {
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
       credits: plan.credits,
       amountPaise: plan.amountPaise,
       status: "pending",
+    });
+
+    // Track analytics event
+    void trackEvent("credit_purchase_started", {
+      userId: session.sub,
+      meta: { planId: plan.id, credits: plan.credits, amountPaise: plan.amountPaise },
     });
 
     return NextResponse.json({

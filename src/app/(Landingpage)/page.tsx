@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Download, FileText, Sparkles, CheckCircle2 } from "lucide-react";
+import SlideRenderer from "@/components/app/SlideRenderer";
 
 const steps = [
   { t: "Upload your source", d: "Upload a PDF or DOCX. SlideQuill reads it and drafts an outline." },
   { t: "Fix the outline", d: "Reorder, rename or delete sections before your slides are written." },
-  { t: "Download the deck", d: "Get an editable .pptx with your template applied. Open it in PowerPoint or Keynote." },
+  { t: "Download the deck", d: "Get an editable .pptx formatted with one of our 6 professionally designed templates. Open it in PowerPoint or Keynote." },
 ];
 
 const features = [
@@ -18,7 +20,7 @@ const plans = [
     name: "Free",
     price: "₹0",
     note: "3 decks to try",
-    items: ["PDF, DOCX or text input", ".pptx export", "Slidequill watermark"],
+    items: ["PDF, DOCX or text input", ".pptx export", "6 professional templates", "Slidequill watermark"],
     cta: "Start free",
     ctaHref: "/signup",
     hl: false,
@@ -27,7 +29,7 @@ const plans = [
     name: "20 Credits",
     price: "₹199",
     note: "20 decks, never expire",
-    items: ["Credits never expire", "Everything in Free", "No watermark", "All templates", "Regenerate any slide"],
+    items: ["Credits never expire", "Everything in Free", "No watermark", "All 6 professional templates", "Regenerate any slide"],
     cta: "Buy 20 credits — ₹199",
     ctaHref: "/signup",
     hl: true,
@@ -36,7 +38,7 @@ const plans = [
     name: "50 Credits",
     price: "₹399",
     note: "50 decks, best value",
-    items: ["Best value pricing", "Everything in 20 Credits", "Priority support", "No watermark", "All templates"],
+    items: ["Best value pricing", "Everything in 20 Credits", "Priority support", "No watermark", "All 6 professional templates"],
     cta: "Buy 50 credits — ₹399",
     ctaHref: "/signup",
     hl: false,
@@ -45,40 +47,120 @@ const plans = [
 
 const faqs = [
   ["Can I edit the slides after export?", "Yes. Every slide is native PowerPoint text and shapes — fully editable in PowerPoint or Keynote."],
+  ["What templates are available?", "SlideQuill includes 6 professionally designed templates (Modern Minimal, Corporate Executive, Creative Studio, Midnight Pitch, Startup Playful, and Elegant Report) with curated typography and color schemes."],
   ["What can I upload?", "PDF, DOCX and plain text. YouTube and web links are planned."],
   ["How many credits does one deck use?", "One credit per deck. A failed generation refunds the credit automatically."],
   ["Can I regenerate individual slides?", "Yes. If one slide isn't right, you can regenerate just that slide without redoing the whole deck."],
   ["Do credits expire?", "No. Credits never expire — use them whenever you need them."],
-  ["Do you store my uploaded documents?", "Uploaded files are used only to generate your deck and are not retained after processing."],
+  ["Do you store my uploaded documents?", "Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your source text immediately from the deck editor at any time. We never use your content to train models."],
 ];
+
 
 const bar = "shadow-[0_10px_30px_-12px_rgba(16,26,58,.35)]";
 
-// Realistic slide preview cards
-const exampleSlides = [
+// Real SlideRenderer slides for Before & After showcase
+const beforeAfterSlide = {
+  id: "hero-sample",
+  layout: "chart" as const,
+  title: "Annual Revenue Acceleration Exceeded 190% YoY",
+  notes: "Executive quarterly summary demonstrating ARR expansion.",
+  sourceSection: "Quarterly Financial Analysis",
+  sourcePage: 12,
+  content: {
+    chartType: "bar" as const,
+    categories: ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"],
+    series: [{ name: "ARR ($M)", values: [1.2, 1.8, 2.6, 3.5] }],
+    caption: "ARR accelerated consistently across four consecutive fiscal quarters.",
+  },
+};
+
+// Gallery sample decks available for instant download
+const sampleDecks = [
   {
-    label: "Title slide",
-    bg: "bg-[#101A3A]",
-    text: "text-white",
-    title: "Q3 Business Review",
-    subtitle: "Performance summary · October 2026",
-    accent: "bg-white/20",
+    title: "Executive Strategic Showcase",
+    description: "Multi-column layouts, quotes, process flows, and stats cards.",
+    theme: "modern",
+    slidesCount: 7,
+    fileSize: "108 KB",
+    downloadUrl: "/samples/executive_showcase.pptx",
+    previewSlide: {
+      id: "preview-1",
+      layout: "stats" as const,
+      title: "Key Performance Metrics & Scale",
+      notes: "Company scale indicators.",
+      content: {
+        stats: [
+          { value: "99.98%", label: "Uptime SLA", icon: "Shield" },
+          { value: "4.2x", label: "ARR Growth", icon: "TrendingUp" },
+          { value: "140K+", label: "Daily Active Users", icon: "Users" },
+        ],
+      },
+    },
   },
   {
-    label: "Content slide",
-    bg: "bg-white",
-    text: "text-[#101A3A]",
-    title: "Key Findings",
-    bullets: ["Revenue up 18% YoY", "Customer retention at 94%", "3 new markets launched"],
-    accent: "bg-[#2F5BFF]",
+    title: "Quarterly Financial Analytics",
+    description: "Native PowerPoint bar, line, and pie charts with editable numbers.",
+    theme: "corporate",
+    slidesCount: 4,
+    fileSize: "138 KB",
+    downloadUrl: "/samples/financial_charts.pptx",
+    previewSlide: {
+      id: "preview-2",
+      layout: "chart" as const,
+      title: "Platform Revenue Breakdown by Segment",
+      notes: "Segment analysis.",
+      content: {
+        chartType: "pie" as const,
+        categories: ["Enterprise", "Cloud Workspace", "Pro Subscriptions", "Integrations"],
+        series: [{ name: "Revenue Share", values: [45, 30, 18, 7] }],
+        caption: "Enterprise now drives nearly half of total contracted ARR.",
+      },
+    },
   },
   {
-    label: "Section slide",
-    bg: "bg-[#F4F6FB]",
-    text: "text-[#101A3A]",
-    title: "Next Steps",
-    bullets: ["Expand to APAC region", "Launch referral programme", "Hire 2 senior engineers"],
-    accent: "bg-[#101A3A]",
+    title: "Global Brand & Spatial Design",
+    description: "Full-bleed and split photography layouts with stock imagery.",
+    theme: "elegant",
+    slidesCount: 3,
+    fileSize: "398 KB",
+    downloadUrl: "/samples/brand_visuals.pptx",
+    previewSlide: {
+      id: "preview-3",
+      layout: "image" as const,
+      title: "Modern Minimalist Work Environments",
+      notes: "Design showcase.",
+      content: {
+        variant: "split" as const,
+        imageKeyword: "modern architecture office",
+        imageUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+        caption: "San Francisco Flagship Studio",
+        bullets: [
+          "Designed for asynchronous collaborative work",
+          "Acoustic isolation zones paired with innovation hubs",
+        ],
+      },
+    },
+  },
+  {
+    title: "Minimal Executive Pitch",
+    description: "Crisp three-slide investor executive summary and closing call to action.",
+    theme: "playful",
+    slidesCount: 3,
+    fileSize: "61 KB",
+    downloadUrl: "/samples/minimal_pitch.pptx",
+    previewSlide: {
+      id: "preview-4",
+      layout: "process" as const,
+      title: "Three Step Enterprise Deployment Path",
+      notes: "Onboarding trajectory.",
+      content: {
+        steps: [
+          { label: "Audit", desc: "Security and compliance validation", icon: "Search" },
+          { label: "Connect", desc: "SSO and directory integration", icon: "Cpu" },
+          { label: "Scale", desc: "Rollout across global teams", icon: "Rocket" },
+        ],
+      },
+    },
   },
 ];
 
@@ -167,37 +249,120 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Output proof */}
+      {/* Interactive Before & After Showcase */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-3xl font-extrabold tracking-tight [font-family:var(--font-display)]">See what SlideQuill creates</h2>
-        <p className="mt-3 max-w-xl text-[#3a4468]">
-          Each deck is a native <strong>.pptx</strong> file — text, shapes and layouts you can edit directly in PowerPoint or Keynote.
-        </p>
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
-          {exampleSlides.map((slide) => (
-            <div key={slide.label} className={`rounded-xl p-6 ${slide.bg} ${slide.text} ${bar}`} style={{ aspectRatio: "16/9" }}>
-              <div className={`mb-3 h-1 w-8 rounded ${slide.accent}`} />
-              <div className="text-[11px] font-semibold uppercase tracking-wide opacity-60">{slide.label}</div>
-              <div className="mt-2 text-base font-bold leading-tight [font-family:var(--font-display)]">{slide.title}</div>
-              {slide.subtitle && (
-                <div className="mt-1 text-xs opacity-60">{slide.subtitle}</div>
-              )}
-              {slide.bullets && (
-                <ul className="mt-3 space-y-1">
-                  {slide.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-1.5 text-xs">
-                      <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${slide.accent}`} />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#2F5BFF] bg-[#2F5BFF]/10 px-3 py-1 rounded-full">
+              Real Transformation
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight [font-family:var(--font-display)] mt-3">
+              Document In → Native PPTX Out
+            </h2>
+            <p className="mt-2 text-[#3a4468] max-w-xl">
+              See how SlideQuill ingests unstructured document pages and turns them into high-fidelity, presentation-ready slides.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#5a6384]">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" /> Live SVG Preview
+          </div>
         </div>
-        <p className="mt-6 text-sm text-[#5a6384]">
-          Example output — your deck will reflect your own document content and chosen template.
-        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white p-6 sm:p-8 rounded-3xl border border-[#101A3A]/10 shadow-sm">
+          {/* Before: Raw Document Page */}
+          <div className="lg:col-span-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#5a6384]">
+              <span className="flex items-center gap-1.5"><FileText size={14} className="text-red-500" /> Quarterly_Report.pdf (Page 12)</span>
+              <span>Raw Text</span>
+            </div>
+            <div className="bg-[#F4F6FB] p-5 rounded-2xl border border-[#101A3A]/10 font-mono text-xs leading-relaxed text-[#101A3A]/80 flex flex-col gap-2.5 h-[280px] overflow-hidden select-none">
+              <div className="font-bold text-[#101A3A]">3.2 Financial & ARR Trajectory</div>
+              <p>
+                During fiscal year 2026, annualized run-rate revenue experienced notable acceleration across our core enterprise customer segment. Specifically:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-[#3a4468]">
+                <li>Q1 2026 reached $1.2M in recognized ARR with 14 new logos.</li>
+                <li>Q2 expanded to $1.8M, representing a 50% QoQ growth rate.</li>
+                <li>Q3 closed at $2.6M driven by cloud contract expansions.</li>
+                <li>Q4 ended at $3.5M (+191% aggregate annual expansion).</li>
+              </ul>
+              <p className="text-[11px] text-[#5a6384] italic mt-1">
+                Management concludes that expansion velocity was sustained across all quarters...
+              </p>
+            </div>
+          </div>
+
+          {/* Transformation Indicator */}
+          <div className="lg:col-span-1 flex lg:flex-col items-center justify-center text-[#2F5BFF]">
+            <div className="w-10 h-10 rounded-full bg-[#2F5BFF]/10 flex items-center justify-center">
+              <Sparkles size={18} />
+            </div>
+          </div>
+
+          {/* After: SlideRenderer Generated Output */}
+          <div className="lg:col-span-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-[#5a6384]">
+              <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500" /> SlideQuill Generated Slide</span>
+              <span className="text-[#2F5BFF] font-bold">Native Chart</span>
+            </div>
+            <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/10">
+              <SlideRenderer slide={beforeAfterSlide as any} theme="corporate" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sample Gallery & Direct PPTX Downloads */}
+      <section className="bg-white py-20 border-t border-[#101A3A]/10">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2F5BFF] bg-[#2F5BFF]/10 px-3 py-1 rounded-full">
+                Sample Showcase
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight [font-family:var(--font-display)] mt-3">
+                Explore Real Exported Presentations
+              </h2>
+              <p className="mt-2 text-[#3a4468] max-w-xl">
+                Download and inspect authentic <strong>.pptx</strong> decks generated by SlideQuill. Completely native text, vector shapes, and editable charts.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {sampleDecks.map((deck) => (
+              <div
+                key={deck.title}
+                className="rounded-3xl border border-[#101A3A]/10 p-6 bg-[#F4F6FB]/50 hover:bg-white transition-all shadow-sm hover:shadow-md flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Thumbnail */}
+                  <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-sm ring-1 ring-black/5 mb-5">
+                    <SlideRenderer slide={deck.previewSlide as any} theme={deck.theme} className="pointer-events-none" />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="font-bold uppercase tracking-wider text-[#2F5BFF] bg-[#2F5BFF]/10 px-2 py-0.5 rounded">
+                      Template: {deck.theme}
+                    </span>
+                    <span className="text-[#5a6384] font-medium">{deck.slidesCount} slides · {deck.fileSize}</span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-[#101A3A] mb-1">{deck.title}</h3>
+                  <p className="text-xs text-[#5a6384] leading-relaxed mb-6">{deck.description}</p>
+                </div>
+
+                <a
+                  href={deck.downloadUrl}
+                  download
+                  className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-white hover:bg-[#101A3A] text-[#101A3A] hover:text-white border border-[#101A3A]/15 hover:border-transparent rounded-xl text-xs font-bold transition shadow-sm"
+                >
+                  <Download size={14} /> Download Sample .pptx
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Features */}

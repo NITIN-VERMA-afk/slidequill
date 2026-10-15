@@ -5,10 +5,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/db";
 import Deck, { type ISlide } from "@/app/models/Deck";
+import User from "@/app/models/User";
 import DeckVersion from "@/app/models/DeckVersion";
 import { getSession } from "@/lib/auth";
 import { openai } from "@/lib/openai";
-import { SlideSchema } from "@/lib/slides-schema";
+import { SlideSchema, validateAndSanitizeSourcePage, groundAndSanitizeSlide } from "@/lib/slides-schema";
+import { searchStockImage } from "@/lib/image-search";
 import { getDeckLimiter } from "@/lib/ratelimit"; // Reusing the same limiter
 
 const SLIDES_MODEL = process.env.SLIDES_MODEL ?? "gpt-4o-mini";
@@ -41,7 +43,7 @@ export async function POST(
   const instruction = (body.instruction as string) || "";
 
   await connectDB();
-  const deck = await Deck.findOne({ _id: id, userId: session.sub });
+  const deck = await Deck.findOne({ _id: id, userId: session.sub }).select("+sourceText");
   if (!deck) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
@@ -53,9 +55,17 @@ export async function POST(
 
   const existingSlide = deck.slides[slideIndex] as ISlide;
 
-  if ((existingSlide.regenerations ?? 0) >= 10) {
+  // Check user tier: free-tier capped at 3 regenerations per slide, paid capped at 10
+  const user = await User.findById(session.sub).select("hasPurchased").lean();
+  const maxRegens = user?.hasPurchased ? 10 : 3;
+
+  if ((existingSlide.regenerations ?? 0) >= maxRegens) {
     return NextResponse.json(
-      { error: "Regeneration limit reached for this slide." },
+      {
+        error: user?.hasPurchased
+          ? "Regeneration limit reached for this slide (10/10)."
+          : "Free tier regeneration limit reached for this slide (3/3). Upgrade to Pro for more.",
+      },
       { status: 403 }
     );
   }
@@ -105,6 +115,7 @@ Here is the expected JSON schema:
     const newSlide = {
       ...parsed.data,
       id: slideId, // Keep same ID
+      sourcePage: validateAndSanitizeSourcePage(parsed.data.sourcePage, deck.sourcePageCount),
       regenerations: (existingSlide.regenerations ?? 0) + 1,
     };
 
@@ -123,11 +134,27 @@ Here is the expected JSON schema:
       await DeckVersion.deleteMany({ _id: { $in: toDelete } });
     }
 
-    deck.slides[slideIndex] = newSlide;
+    const contentAny = newSlide.content as any;
+    if (contentAny?.imageQuery && (!contentAny.imageUrl || !contentAny.imageUrl.startsWith("http"))) {
+      try {
+        const stock = await searchStockImage(contentAny.imageQuery);
+        if (stock?.url) {
+          contentAny.imageUrl = stock.url;
+          contentAny.photographer = stock.photographer;
+          contentAny.photographerUrl = stock.photographerUrl;
+          console.log(`[SlideImage] Regenerated slide (${newSlide.layout}): resolved image via '${stock.source}' (query: "${contentAny.imageQuery}")`);
+        }
+      } catch (err) {
+        console.warn("[SlideImage] Single slide regenerate image fetch failed:", err);
+      }
+    }
+
+    const groundedSlide = groundAndSanitizeSlide(newSlide, deck.sourceText);
+    deck.slides[slideIndex] = groundedSlide;
     deck.markModified(`slides.${slideIndex}`);
     await deck.save();
 
-    return NextResponse.json({ slide: newSlide });
+    return NextResponse.json({ slide: groundedSlide });
   } catch (err) {
     console.error("Regeneration failed:", err);
     return NextResponse.json(

@@ -10,17 +10,26 @@ import Deck from "@/app/models/Deck";
 import { getSession } from "@/lib/auth";
 import { extractText } from "@/lib/extract";
 import { getDeckLimiter } from "@/lib/ratelimit";
+import { trackEvent } from "@/lib/analytics";
 
 import { themes, defaultThemeId } from "@/lib/themes";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_TEXT_CHARS = 50_000;
+const MAX_TEXT_CHARS = 150_000;
 
 const textSchema = z.object({
   title: z.string().max(200).optional(),
-  text: z.string().min(1, "Text is required").max(MAX_TEXT_CHARS),
+  text: z
+    .string()
+    .min(1, "Text is required")
+    .max(
+      MAX_TEXT_CHARS,
+      "Document exceeds maximum supported size of 150,000 characters (approx. 50–60 pages). Please upload a shorter document or extract relevant chapters."
+    ),
   theme: z.string().optional(),
+  includeImages: z.boolean().optional(),
 });
+
 
 function sanitiseName(name: string): string {
   return name.replace(/[^\w.\-\s]/g, "_").slice(0, 200);
@@ -46,8 +55,11 @@ export async function POST(req: NextRequest) {
   const ct = req.headers.get("content-type") ?? "";
   let sourceText: string;
   let sourceName: string;
+  let sourceMime = "text/plain";
+  let sourcePageCount: number | undefined;
   let title: string | undefined;
   let theme: string = defaultThemeId;
+  let includeImages = true;
 
   // ── File upload path ──────────────────────────────────────────────────────
   if (ct.includes("multipart/form-data")) {
@@ -78,10 +90,16 @@ export async function POST(req: NextRequest) {
     }
 
     sourceText = result.text;
+    sourceMime = result.mime;
+    sourcePageCount = result.pageCount;
     sourceName = sanitiseName(file.name);
     title = (form.get("title") as string | null) ?? sourceName;
     const themeParam = form.get("theme") as string | null;
     if (themeParam && themes[themeParam]) theme = themeParam;
+    const includeImagesParam = form.get("includeImages");
+    if (includeImagesParam !== null) {
+      includeImages = includeImagesParam === "true" || includeImagesParam === "1" || includeImagesParam === "on";
+    }
 
   // ── JSON text path ─────────────────────────────────────────────────────────
   } else {
@@ -102,8 +120,13 @@ export async function POST(req: NextRequest) {
 
     sourceText = parsed.data.text;
     sourceName = "pasted text";
+    sourceMime = "text/plain";
+    sourcePageCount = undefined;
     title = parsed.data.title;
     if (parsed.data.theme && themes[parsed.data.theme]) theme = parsed.data.theme;
+    if (typeof parsed.data.includeImages === "boolean") {
+      includeImages = parsed.data.includeImages;
+    }
   }
 
   await connectDB();
@@ -112,8 +135,17 @@ export async function POST(req: NextRequest) {
     title: title?.trim() || "Untitled deck",
     sourceText,   // stored, select:false, never returned
     sourceName,
+    sourceMime,
+    sourcePageCount,
     status: "outlining",
     theme,
+    includeImages,
+  });
+
+  // Track analytics event
+  void trackEvent("deck_created", {
+    userId,
+    deckId: deck._id.toString(),
   });
 
   return NextResponse.json({ id: deck._id.toString() }, { status: 201 });

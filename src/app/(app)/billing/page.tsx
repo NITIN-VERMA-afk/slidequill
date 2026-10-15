@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { CreditCard, Zap, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -25,7 +25,7 @@ export default function BillingPage() {
   const [credits, setCredits] = useState(0);
   const [history, setHistory] = useState<PaymentRecord[]>([]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch("/api/billing/history");
       if (res.ok) {
@@ -35,10 +35,24 @@ export default function BillingPage() {
       }
     } catch (e) {}
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchHistory();
+    let active = true;
+    fetch("/api/billing/history")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active || !data) return;
+        setCredits(data.credits);
+        setHistory(data.payments);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleBuy = async (planId: string) => {

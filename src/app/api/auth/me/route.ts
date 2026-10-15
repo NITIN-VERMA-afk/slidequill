@@ -5,25 +5,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { verifyAccessToken } from "@/lib/auth";
+import { verifyAccessToken, findSession, signAccessToken } from "@/lib/auth";
 import { connectDB } from "@/app/lib/db";
 import User from "@/app/models/User";
 
 async function getUser(req: NextRequest) {
   const token = req.cookies.get("sq_at")?.value;
-  if (!token) return null;
-  const payload = await verifyAccessToken(token);
-  if (!payload?.sub) return null;
-  await connectDB();
-  return User.findById(payload.sub);
+  if (token) {
+    const payload = await verifyAccessToken(token);
+    if (payload?.sub) {
+      await connectDB();
+      const user = await User.findById(payload.sub);
+      if (user) return user;
+    }
+  }
+
+  // Fallback: check refresh token
+  const rawRefresh = req.cookies.get("sq_rt")?.value;
+  if (rawRefresh) {
+    await connectDB();
+    const session = await findSession(rawRefresh);
+    if (session?.userId) {
+      return User.findById(session.userId);
+    }
+  }
+
+  return null;
 }
 
 export async function GET(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  return NextResponse.json({
+
+  const res = NextResponse.json({
     user: { email: user.email, name: user.name, role: user.role, credits: user.credits, emailVerified: user.emailVerified },
   });
+
+  // Re-issue access token if it was missing or expired
+  const token = req.cookies.get("sq_at")?.value;
+  const payload = token ? await verifyAccessToken(token) : null;
+  if (!payload) {
+    const newAccessToken = await signAccessToken(user._id.toString(), user.role);
+    res.cookies.set("sq_at", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 15,
+    });
+  }
+
+  return res;
 }
 
 const patchSchema = z.object({

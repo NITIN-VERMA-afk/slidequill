@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 const schema = z.object({
@@ -29,6 +29,20 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(searchParams.get("error"));
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (active && res.ok) {
+          router.replace(next);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [router, next]);
 
   const {
     register,

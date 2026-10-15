@@ -1,8 +1,8 @@
 export type TitleSlideStyle = "center" | "left" | "split";
 
 export interface FontDef {
-  name: string;      // Google Font name (e.g. 'Inter', 'Merriweather')
-  fallback: string;  // PPTX safe fallback (e.g. 'Arial', 'Georgia', 'Calibri')
+  name: string;      // Native PowerPoint safe font name (e.g. 'Arial', 'Calibri', 'Georgia', 'Trebuchet MS')
+  fallback: string;  // CSS fallback stack (e.g. 'sans-serif', 'serif')
 }
 
 export interface ThemeColors {
@@ -17,6 +17,7 @@ export interface ThemeColors {
 export interface ThemeDef {
   id: string;
   name: string;
+  description: string;
   colors: ThemeColors;
   headingFont: FontDef;
   bodyFont: FontDef;
@@ -28,6 +29,7 @@ export const themes: Record<string, ThemeDef> = {
   modern: {
     id: "modern",
     name: "Modern Minimal",
+    description: "Clean, spacious slides with beautiful typography and a crisp white palette.",
     colors: {
       bg: "#ffffff",
       surface: "#f8fafc",
@@ -36,14 +38,15 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#2563eb",
       accent2: "#3b82f6",
     },
-    headingFont: { name: "Inter", fallback: "Arial" },
-    bodyFont: { name: "Inter", fallback: "Arial" },
+    headingFont: { name: "Arial", fallback: "sans-serif" },
+    bodyFont: { name: "Calibri", fallback: "sans-serif" },
     titleSlideStyle: "center",
     cornerRadius: 1, // small rounding
   },
   corporate: {
     id: "corporate",
     name: "Corporate Executive",
+    description: "Professional and structured with serif fonts. Perfect for reports and executive decks.",
     colors: {
       bg: "#f8fafc",
       surface: "#ffffff",
@@ -52,14 +55,15 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#0f172a", // Dark slate for strong accents
       accent2: "#334155",
     },
-    headingFont: { name: "Playfair Display", fallback: "Georgia" },
-    bodyFont: { name: "Source Sans Pro", fallback: "Arial" },
+    headingFont: { name: "Georgia", fallback: "serif" },
+    bodyFont: { name: "Calibri", fallback: "sans-serif" },
     titleSlideStyle: "left",
     cornerRadius: 0, // sharp edges
   },
   creative: {
     id: "creative",
     name: "Creative Studio",
+    description: "Warm tones, bold rose accents, and expressive typography for creative work.",
     colors: {
       bg: "#fffbeb", // warm amber tint
       surface: "#ffffff",
@@ -68,14 +72,15 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#e11d48", // rose accent
       accent2: "#f43f5e",
     },
-    headingFont: { name: "Space Grotesk", fallback: "Arial" },
-    bodyFont: { name: "Outfit", fallback: "Calibri" },
+    headingFont: { name: "Trebuchet MS", fallback: "sans-serif" },
+    bodyFont: { name: "Calibri", fallback: "sans-serif" },
     titleSlideStyle: "split",
     cornerRadius: 3, // very rounded
   },
   dark: {
     id: "dark",
     name: "Midnight Pitch",
+    description: "High-contrast dark background with bright blue accents. Great for pitch decks.",
     colors: {
       bg: "#09090b",
       surface: "#18181b",
@@ -84,14 +89,15 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#3b82f6", // bright blue
       accent2: "#60a5fa",
     },
-    headingFont: { name: "Outfit", fallback: "Calibri" },
-    bodyFont: { name: "Inter", fallback: "Arial" },
+    headingFont: { name: "Trebuchet MS", fallback: "sans-serif" },
+    bodyFont: { name: "Arial", fallback: "sans-serif" },
     titleSlideStyle: "left",
     cornerRadius: 1.5,
   },
   playful: {
     id: "playful",
     name: "Startup Playful",
+    description: "Fuchsia accents and rounded fonts. Ideal for startups and product launches.",
     colors: {
       bg: "#fdf4ff", // subtle fuchsia
       surface: "#ffffff",
@@ -100,14 +106,15 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#c026d3", // fuchsia accent
       accent2: "#e879f9",
     },
-    headingFont: { name: "Fredoka", fallback: "Arial" },
-    bodyFont: { name: "Nunito", fallback: "Calibri" },
+    headingFont: { name: "Trebuchet MS", fallback: "sans-serif" },
+    bodyFont: { name: "Calibri", fallback: "sans-serif" },
     titleSlideStyle: "center",
     cornerRadius: 4,
   },
   elegant: {
     id: "elegant",
     name: "Elegant Report",
+    description: "Earthy tones with forest green accents and classic serif fonts for polished reports.",
     colors: {
       bg: "#fafaf9",
       surface: "#f5f5f4",
@@ -116,8 +123,8 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#166534", // forest green
       accent2: "#22c55e",
     },
-    headingFont: { name: "Merriweather", fallback: "Georgia" },
-    bodyFont: { name: "Lora", fallback: "Georgia" },
+    headingFont: { name: "Palatino Linotype", fallback: "Georgia, serif" },
+    bodyFont: { name: "Georgia", fallback: "serif" },
     titleSlideStyle: "split",
     cornerRadius: 0,
   },
