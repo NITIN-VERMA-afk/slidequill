@@ -13,6 +13,7 @@ import { SlideSchema, validateAndSanitizeSourcePage, groundAndSanitizeSlide } fr
 import { searchStockImage } from "@/lib/image-search";
 import { getDeckLimiter } from "@/lib/ratelimit"; // Reusing the same limiter
 
+export const maxDuration = 60;
 const SLIDES_MODEL = process.env.SLIDES_MODEL ?? "gpt-4o-mini";
 
 export async function POST(

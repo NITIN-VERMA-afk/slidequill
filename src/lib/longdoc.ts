@@ -36,8 +36,78 @@ const ReducedOutlineSchema = z.object({
       })
     )
     .min(3)
-    .max(15),
+    .max(25),
 });
+
+export interface SectionScaling {
+  targetSections: number;
+  minSections: number;
+  maxSections: number;
+  rationale: string;
+}
+
+/**
+ * Calculates the target number of outline sections based on document length, page count,
+ * and user-specified target slide count.
+ *
+ * Scaling Rules:
+ * - If user selected slide count (e.g. 6, 10, 15, 20): honors user preference.
+ * - Otherwise:
+ *   - <= 8,000 chars or <= 3 pages: 6 sections (min: 5, max: 7) - concise summary
+ *   - 8,000 - 24,000 chars or 4 - 9 pages: 10 sections (min: 8, max: 12) - standard deck
+ *   - 24,000 - 50,000 chars or 10 - 20 pages: 14 sections (min: 12, max: 16) - detailed review
+ *   - > 50,000 chars or > 20 pages (e.g. 30-page doc): 18 sections (min: 15, max: 20) - comprehensive analysis
+ */
+export function calculateTargetSectionCount(
+  charCount: number,
+  pageCount?: number,
+  userTargetSlideCount?: number
+): SectionScaling {
+  if (userTargetSlideCount && [6, 10, 15, 20].includes(userTargetSlideCount)) {
+    return {
+      targetSections: userTargetSlideCount,
+      minSections: Math.max(4, userTargetSlideCount - 1),
+      maxSections: Math.min(22, userTargetSlideCount + 1),
+      rationale: `User requested ${userTargetSlideCount} slides`,
+    };
+  }
+
+  const effectivePages = pageCount ?? Math.ceil(charCount / 2500);
+
+  if (charCount > 50_000 || effectivePages >= 20) {
+    return {
+      targetSections: 18,
+      minSections: 15,
+      maxSections: 20,
+      rationale: `Very long document (~${effectivePages} pages, ${charCount.toLocaleString()} chars) scales to 18 sections for proportional coverage.`,
+    };
+  }
+
+  if (charCount > 24_000 || effectivePages >= 10) {
+    return {
+      targetSections: 14,
+      minSections: 12,
+      maxSections: 16,
+      rationale: `Long document (~${effectivePages} pages, ${charCount.toLocaleString()} chars) scales to 14 sections.`,
+    };
+  }
+
+  if (charCount > 8_000 || effectivePages >= 4) {
+    return {
+      targetSections: 10,
+      minSections: 8,
+      maxSections: 12,
+      rationale: `Medium document (~${effectivePages} pages, ${charCount.toLocaleString()} chars) scales to 10 sections.`,
+    };
+  }
+
+  return {
+    targetSections: 6,
+    minSections: 5,
+    maxSections: 7,
+    rationale: `Short document (~${effectivePages} pages, ${charCount.toLocaleString()} chars) scales to 6 sections.`,
+  };
+}
 
 /**
  * Approximates token count based on typical English/code density (~4 chars per token).
@@ -279,8 +349,10 @@ export async function summarizeChunkWithRetry(
 export async function reduceNotesToOutline(
   deckTitle: string,
   chunkNotes: IChunkNote[],
-  model: string = "gpt-4o-mini"
+  model: string = "gpt-4o-mini",
+  targetScaling?: SectionScaling
 ): Promise<{ outline: OutlineSection[]; usage: { promptTokens: number; completionTokens: number } }> {
+  const target = targetScaling ?? { targetSections: 10, minSections: 8, maxSections: 12 };
   const notesSummary = chunkNotes
     .map(
       (c) =>
@@ -293,7 +365,7 @@ ${c.dataPoints.length > 0 ? `Metrics & Data:\n${c.dataPoints.map((d) => `- ${d}`
     .join("\n\n");
 
   const systemPrompt = `You are a professional presentation architect.
-Your task is to synthesize structured notes from across an entire document into a compelling presentation outline (5 to 10 slides).
+Your task is to synthesize structured notes from across an entire document into a compelling presentation outline of approximately ${target.targetSections} slides (between ${target.minSections} and ${target.maxSections} slides).
 
 CRITICAL INSTRUCTIONS:
 1. Represent the ENTIRE document proportionally across all page ranges from beginning to end.

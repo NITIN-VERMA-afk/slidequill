@@ -28,6 +28,7 @@ const textSchema = z.object({
     ),
   theme: z.string().optional(),
   includeImages: z.boolean().optional(),
+  targetSlideCount: z.number().int().min(4).max(30).optional(),
 });
 
 
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
   let title: string | undefined;
   let theme: string = defaultThemeId;
   let includeImages = true;
+  let targetSlideCount = 10;
 
   // ── File upload path ──────────────────────────────────────────────────────
   if (ct.includes("multipart/form-data")) {
@@ -100,6 +102,13 @@ export async function POST(req: NextRequest) {
     if (includeImagesParam !== null) {
       includeImages = includeImagesParam === "true" || includeImagesParam === "1" || includeImagesParam === "on";
     }
+    const slideCountParam = form.get("targetSlideCount");
+    if (slideCountParam) {
+      const parsedCount = parseInt(String(slideCountParam), 10);
+      if ([6, 10, 15, 20].includes(parsedCount)) {
+        targetSlideCount = parsedCount;
+      }
+    }
 
   // ── JSON text path ─────────────────────────────────────────────────────────
   } else {
@@ -127,6 +136,9 @@ export async function POST(req: NextRequest) {
     if (typeof parsed.data.includeImages === "boolean") {
       includeImages = parsed.data.includeImages;
     }
+    if (parsed.data.targetSlideCount) {
+      targetSlideCount = parsed.data.targetSlideCount;
+    }
   }
 
   await connectDB();
@@ -140,6 +152,7 @@ export async function POST(req: NextRequest) {
     status: "outlining",
     theme,
     includeImages,
+    targetSlideCount,
   });
 
   // Track analytics event
@@ -159,10 +172,26 @@ export async function GET(req: NextRequest) {
   }
 
   await connectDB();
-  const decks = await Deck.find({ userId: session.sub })
-    .select("title status sourceName theme createdAt updatedAt")
+  const decksRaw = await Deck.find({ userId: session.sub })
+    .select("title status sourceName theme createdAt updatedAt coverImage slides")
     .sort({ createdAt: -1 })
     .lean();
+
+  const decks = decksRaw.map((d: any) => {
+    const firstSlideWithImg = d.slides?.find((s: any) => s.content?.imageUrl);
+    const coverImage = d.coverImage || firstSlideWithImg?.content?.imageUrl || null;
+    return {
+      _id: d._id,
+      title: d.title,
+      status: d.status,
+      sourceName: d.sourceName,
+      theme: d.theme,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+      coverImage,
+      slideCount: Array.isArray(d.slides) ? d.slides.length : 0,
+    };
+  });
 
   return NextResponse.json({ decks });
 }

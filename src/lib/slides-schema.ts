@@ -282,6 +282,160 @@ export function validateAndSanitizeSourcePage(
 }
 
 /**
+ * Checks if a numeric value appears in the source text, tolerating common formatting
+ * such as "$20.4M" vs 20.4, "21.0%" vs 21, "48,000" vs 48000, "₹28.7Cr" vs 28.7.
+ */
+export function isNumberInSource(num: number, sourceText: string): boolean {
+  if (typeof num !== "number" || isNaN(num) || !sourceText || typeof sourceText !== "string") {
+    return false;
+  }
+
+  const numStr = String(num);
+  // 1. Exact string match
+  if (sourceText.includes(numStr)) return true;
+
+  // 2. Integer with decimal zero (e.g. plotted 21 vs source "21.0" or "21.0%")
+  if (Number.isInteger(num)) {
+    if (sourceText.includes(`${num}.0`)) return true;
+  } else {
+    // 3. Trim trailing decimal zeros (e.g. 20.40 vs 20.4)
+    const trimmed = numStr.replace(/\.?0+$/, "");
+    if (trimmed && sourceText.includes(trimmed)) return true;
+  }
+
+  // 4. US formatted comma match (e.g. 48000 vs 48,000)
+  const withCommas = num.toLocaleString("en-US");
+  if (sourceText.includes(withCommas)) return true;
+
+  // 5. Token scanner matching currency amounts, percentages, and metrics in text
+  const tokenRegex = /[-+]?[₹$€£]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)/g;
+  let match: RegExpExecArray | null;
+  while ((match = tokenRegex.exec(sourceText)) !== null) {
+    const rawDigits = match[1].replace(/,/g, "");
+    const parsed = parseFloat(rawDigits);
+    if (!isNaN(parsed) && Math.abs(parsed - num) < 0.0001) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Fallback converter for charts that cannot be grounded:
+ * - If 2 to 4 grounded data points exist with labels, converts to stats layout.
+ * - Otherwise converts to bullets layout with takeaway summaries.
+ * - Never invents or pads data.
+ */
+export function convertChartToFallbackLayout<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
+  slide: T,
+  sourceText?: string
+): T {
+  const content = slide.content || {};
+  const categories: string[] = Array.isArray(content.categories) ? content.categories : [];
+  const series: Array<{ name: string; values: number[] }> = Array.isArray(content.series) ? content.series : [];
+
+  // 1. Check if 2-4 grounded data points exist to form a valid stats slide
+  if (sourceText && typeof sourceText === "string" && categories.length >= 2 && series.length >= 1) {
+    const firstSeries = series[0];
+    const groundedStats: Array<{ value: string; label: string }> = [];
+    if (Array.isArray(firstSeries.values)) {
+      for (let i = 0; i < categories.length && i < firstSeries.values.length; i++) {
+        const val = firstSeries.values[i];
+        if (typeof val === "number" && !isNaN(val) && isNumberInSource(val, sourceText)) {
+          groundedStats.push({
+            value: String(val),
+            label: truncateWordsAndChars(categories[i], 8, 55),
+          });
+        }
+      }
+    }
+    if (groundedStats.length >= 2 && groundedStats.length <= 4) {
+      (slide as any).layout = "stats";
+      (slide as any).content = {
+        stats: groundedStats,
+      };
+      return slide;
+    }
+  }
+
+  // 2. Otherwise convert to bullets layout without inventing data
+  const bullets: string[] = [];
+  if (content.caption && typeof content.caption === "string" && content.caption.trim()) {
+    bullets.push(truncateWordsAndChars(content.caption, 12, 90));
+  }
+  for (const cat of categories) {
+    if (cat && typeof cat === "string" && cat.trim() && bullets.length < 4) {
+      bullets.push(truncateWordsAndChars(cat, 12, 90));
+    }
+  }
+  if (Array.isArray(content.bullets)) {
+    for (const b of content.bullets) {
+      if (b && typeof b === "string" && b.trim() && bullets.length < 4) {
+        bullets.push(truncateWordsAndChars(b, 12, 90));
+      }
+    }
+  }
+  while (bullets.length < 2) {
+    bullets.push(truncateWordsAndChars(`Key findings for ${slide.title || "strategic analysis"}`, 12, 90));
+  }
+
+  (slide as any).layout = "bullets";
+  (slide as any).content = {
+    bullets: bullets.slice(0, 4),
+  };
+  return slide;
+}
+
+/**
+ * Enforces strict chart data integrity:
+ * - A chart slide is allowed ONLY IF the source excerpt contains at least 3 real data points for the series.
+ * - Every plotted value must appear in the source excerpt (numeric match, tolerating formatting like "$20.4M" vs 20.4).
+ * - If not, changes the layout to bullets or stats and never invents or pads data.
+ */
+export function validateAndGroundChartSlide<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
+  slide: T,
+  sourceText?: string
+): T {
+  if (slide.layout !== "chart") return slide;
+
+  const content = slide.content || {};
+  const categories: string[] = Array.isArray(content.categories) ? content.categories : [];
+  const series: Array<{ name: string; values: number[] }> = Array.isArray(content.series) ? content.series : [];
+
+  if (!sourceText || typeof sourceText !== "string" || !sourceText.trim()) {
+    return convertChartToFallbackLayout(slide);
+  }
+
+  const cleanSource = sourceText.trim();
+  const allValues: number[] = [];
+  for (const ser of series) {
+    if (!Array.isArray(ser.values)) {
+      return convertChartToFallbackLayout(slide, cleanSource);
+    }
+    for (const val of ser.values) {
+      if (typeof val !== "number" || isNaN(val)) {
+        return convertChartToFallbackLayout(slide, cleanSource);
+      }
+      allValues.push(val);
+    }
+  }
+
+  // Must contain at least 3 data points total
+  if (allValues.length < 3) {
+    return convertChartToFallbackLayout(slide, cleanSource);
+  }
+
+  // Every plotted value must appear in the source text
+  const allGrounded = allValues.every((val) => isNumberInSource(val, cleanSource));
+  if (!allGrounded) {
+    return convertChartToFallbackLayout(slide, cleanSource);
+  }
+
+  return slide;
+}
+
+/**
  * Sanitizes raw AI JSON output before strict validation:
  * - Trims and collapses whitespace
  * - Truncates strings exceeding word or char limits at word boundaries
@@ -293,7 +447,8 @@ export function sanitizeSlidePayload(
   isFirst: boolean = false,
   isLast: boolean = false,
   stats?: SanitizeStats,
-  sourcePageCount?: number
+  sourcePageCount?: number,
+  sourceText?: string
 ): any {
   if (!raw || typeof raw !== "object") return {};
 
@@ -525,42 +680,72 @@ export function sanitizeSlidePayload(
         categories = categories.slice(0, 8);
         recordTruncate();
       }
-      while (categories.length < 2) {
-        categories.push(`Item ${categories.length + 1}`);
-      }
 
+      // Clean series strictly: only keep numeric values, never invent or pad default values
       let series = Array.isArray(content.series)
-        ? content.series.map((ser: any) => {
-            const name = cleanString(ser?.name || "Metric", 4, 30);
-            const values = Array.isArray(ser?.values)
-              ? ser.values.slice(0, categories.length).map((v: any) => (typeof v === "number" && !isNaN(v) ? v : Number(v) || 0))
-              : [];
-            while (values.length < categories.length) {
-              values.push(10);
-            }
-            return { name, values };
-          })
+        ? content.series
+            .map((ser: any) => {
+              const name = cleanString(ser?.name || "Metric", 4, 30);
+              const values = Array.isArray(ser?.values)
+                ? ser.values
+                    .map((v: any) => (typeof v === "number" && !isNaN(v) ? v : parseFloat(v)))
+                    .filter((v: number) => typeof v === "number" && !isNaN(v))
+                : [];
+              return { name, values };
+            })
+            .filter((s: any) => s.values.length > 0)
         : [];
       if (series.length > 3) {
         series = series.slice(0, 3);
         recordTruncate();
       }
-      if (series.length === 0) {
-        series = [{ name: "Value", values: categories.map(() => 10) }];
+
+      const totalValues = series.reduce((sum: number, s: any) => sum + s.values.length, 0);
+      const allSeriesMatchCategories =
+        series.length >= 1 &&
+        categories.length >= 2 &&
+        series.every((s: any) => s.values.length === categories.length);
+
+      // Check grounding if sourceText is provided
+      let isGrounded = true;
+      if (sourceText && typeof sourceText === "string" && sourceText.trim()) {
+        const allPlottedValues = series.flatMap((s: any) => s.values);
+        isGrounded =
+          allPlottedValues.length >= 3 &&
+          allPlottedValues.every((val: number) => isNumberInSource(val, sourceText));
       }
 
-      result = {
-        title,
-        notes,
-        layout: "chart",
-        content: {
-          chartType,
-          chartTitle,
-          categories,
-          series,
-          caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
-        },
-      };
+      // Chart is only allowed if it has at least 3 values, matches categories, and is grounded
+      if (allSeriesMatchCategories && totalValues >= 3 && isGrounded) {
+        result = {
+          title,
+          notes,
+          layout: "chart",
+          content: {
+            chartType,
+            chartTitle,
+            categories,
+            series,
+            caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
+          },
+        };
+      } else {
+        // Fallback to bullets or stats without inventing data
+        const tempSlide = {
+          title,
+          notes,
+          layout: "chart",
+          content: {
+            chartType,
+            chartTitle,
+            categories,
+            series,
+            caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
+            bullets: Array.isArray(content.bullets) ? content.bullets : undefined,
+          },
+        };
+        result = convertChartToFallbackLayout(tempSlide, sourceText);
+      }
       break;
     }
     case "image": {
@@ -656,6 +841,10 @@ export function groundAndSanitizeSlide<T extends { title?: string; notes?: strin
 ): T {
   const cleanSource = (sourceText || "").trim();
   const urlRegex = /https?:\/\/[^\s"'<>)\]]+/gi;
+
+  if (slide.layout === "chart") {
+    slide = validateAndGroundChartSlide(slide, cleanSource);
+  }
 
   function stripUnapprovedUrls(text: any): string {
     if (!text || typeof text !== "string") return text;

@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  X,
 } from "lucide-react";
 import { clsx } from "clsx";
 import NavLink from "./NavLink";
@@ -68,9 +69,13 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
     });
   };
 
-  // Close drawer on route change
+  // Close drawer on route change only when pathname actually changes
+  const prevPathnameRef = useRef(pathname);
   useEffect(() => {
-    onDrawerClose();
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname;
+      onDrawerClose();
+    }
   }, [pathname, onDrawerClose]);
 
   // Escape key closes drawer
@@ -132,7 +137,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
           <Image src="/logo-icon.png" alt="SlideQuill" width={28} height={28} className="shrink-0 rounded-sm" />
           {(!collapsed || isMobile) && <span>Slidequill</span>}
         </Link>
-        {!isMobile && (
+        {!isMobile ? (
           <button
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -140,6 +145,14 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
             className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-white/50 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F5BFF]"
           >
             {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          </button>
+        ) : (
+          <button
+            onClick={onDrawerClose}
+            aria-label="Close navigation menu"
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-md text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F5BFF]"
+          >
+            <X size={18} />
           </button>
         )}
       </div>
@@ -206,7 +219,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       {/* Mobile backdrop */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           aria-hidden="true"
           onClick={onDrawerClose}
         />
@@ -214,9 +227,9 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
 
       {/* Mobile drawer */}
       <aside
+        id="mobile-drawer"
         className={clsx(
-          "fixed inset-y-0 left-0 z-40 h-full md:hidden",
-          "@media (prefers-reduced-motion: no-preference) transition-transform duration-200 ease-out",
+          "fixed inset-y-0 left-0 z-50 h-full md:hidden transition-transform duration-200 ease-out",
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Mobile navigation"
@@ -225,7 +238,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
         hidden={!drawerOpen}
         style={{
           transform: drawerOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 175ms ease-out",
+          transition: "transform 200ms ease-out",
         }}
       >
         {drawerOpen && sidebarContent(true)}

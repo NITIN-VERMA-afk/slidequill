@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
+import { clsx } from "clsx";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import type { SessionUser } from "@/lib/auth";
@@ -11,7 +13,11 @@ interface AppShellProps {
 }
 
 export default function AppShell({ user, children }: AppShellProps) {
+  const pathname = usePathname();
+  const isDashboard = pathname === "/dashboard";
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const handleDrawerClose = useCallback(() => setDrawerOpen(false), []);
+  const handleDrawerOpen = useCallback(() => setDrawerOpen(true), []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F4F6FB] [font-family:var(--font-body)]">
@@ -19,7 +25,7 @@ export default function AppShell({ user, children }: AppShellProps) {
       <Sidebar
         user={user}
         drawerOpen={drawerOpen}
-        onDrawerClose={() => setDrawerOpen(false)}
+        onDrawerClose={handleDrawerClose}
       />
 
       {/* Main area */}
@@ -49,11 +55,16 @@ export default function AppShell({ user, children }: AppShellProps) {
         <Topbar
           user={user}
           credits={user.credits}
-          onMenuOpen={() => setDrawerOpen(true)}
+          onMenuOpen={handleDrawerOpen}
         />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto p-6 md:p-8"
+          className={clsx(
+            "flex-1 min-h-0",
+            isDashboard
+              ? "overflow-hidden p-4 sm:p-6 md:p-8 flex flex-col"
+              : "overflow-y-auto p-6 md:p-8"
+          )}
         >
           {children}
         </main>

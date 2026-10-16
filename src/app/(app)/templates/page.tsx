@@ -26,6 +26,10 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "Introduction to scalability and cloud architecture",
       content: {
         subtitle: "Scalability, Performance & Cloud Architecture Roadmap",
+        imageUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+        imagePlacement: "background",
+        imageQuery: "modern glass skyscraper architectural",
+        photographer: "Sean Pollock",
       },
     },
     {
@@ -53,6 +57,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Distributed in-memory caching reducing cold-start latency by 74%",
         ],
         icons: ["Shield", "Zap", "Layers"],
+        imageUrl: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "cloud server datacenter racks",
+        photographer: "Ian Battaglia",
       },
     },
     {
@@ -114,6 +121,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "This architecture allowed us to scale from 1M to 50M daily requests with zero downtime and lower operating costs.",
         attribution: "Elena Rostova, VP Engineering at CloudWave",
+        imageUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80",
+        photographer: "Christina @ wocintechchat.com",
       },
     },
     {
@@ -136,6 +145,10 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "Annual corporate overview and governance review",
       content: {
         subtitle: "Governance, Enterprise Growth & Market Expansion",
+        imageUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+        imagePlacement: "background",
+        imageQuery: "corporate executive boardroom meeting room",
+        photographer: "Nastuh Abootalebi",
       },
     },
     {
@@ -185,6 +198,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Consolidation of technology stack yielding 18% cost reductions",
         ],
         icons: ["Briefcase", "Globe", "CheckCircle2"],
+        imageUrl: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "strategic corporate finance planning",
+        photographer: "Scott Graham",
       },
     },
     {
@@ -211,6 +227,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "Operational discipline paired with disciplined capital allocation has solidified our leadership in enterprise solutions.",
         attribution: "Marcus Vance, Chief Executive Officer",
+        imageUrl: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+        photographer: "Hunters Race",
       },
     },
     {
@@ -233,6 +251,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "Introduction to studio brand identity",
       content: {
         subtitle: "Visual Identity, Spatial Aesthetics & Modular Systems",
+        imageUrl: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1000&q=80",
+        imageQuery: "creative design studio workspace",
+        photographer: "Igor Miske",
       },
     },
     {
@@ -247,6 +268,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Seamless translation across digital and physical spaces",
         ],
         icons: ["Layers", "Compass", "Lightbulb"],
+        imageUrl: "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "abstract colorful creative geometry",
+        photographer: "Frank V.",
       },
     },
     {
@@ -306,6 +330,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "Design is not just what it looks like; it is how deeply it sparks connection in the human imagination.",
         attribution: "Maya Lin, Creative Director",
+        imageUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+        photographer: "Aiyana Mint",
       },
     },
     {
@@ -328,6 +354,10 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "Technical pitch for high-performance AI infra",
       content: {
         subtitle: "Next-Gen AI Operations & Real-Time Edge Inference",
+        imageUrl: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+        imagePlacement: "background",
+        imageQuery: "dark matrix cyber code stream",
+        photographer: "Markus Spiske",
       },
     },
     {
@@ -355,6 +385,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Autonomous fault recovery with self-healing inference workers",
         ],
         icons: ["Cpu", "Zap", "Activity"],
+        imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "microchip hardware technology circuit",
+        photographer: "Alexandre Debiève",
       },
     },
     {
@@ -403,6 +436,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "Autonomous edge inference represents the single biggest operational inflection point for modern software.",
         attribution: "Dr. Aris Thorne, AI Research Lead",
+        imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+        photographer: "Joseph Gonzalez",
       },
     },
     {
@@ -425,6 +460,10 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "New product reveal presentation",
       content: {
         subtitle: "Empowering Modern Teams with Intuitive Tools",
+        imageUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80",
+        imagePlacement: "background",
+        imageQuery: "vibrant creative collaborative startup team",
+        photographer: "Annie Spratt",
       },
     },
     {
@@ -465,6 +504,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Collaborative live multiplayer with zero syncing hiccups",
         ],
         icons: ["Heart", "Star", "Users"],
+        imageUrl: "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "modern mobile user experience wireframing",
+        photographer: "UX Store",
       },
     },
     {
@@ -498,6 +540,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "Our team shipped twice as fast while having twice as much fun doing it. It simply sparks joy every single day.",
         attribution: "Chloe Chen, Founder at Popcorn Studio",
+        imageUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=800&q=80",
+        photographer: "Michael Dam",
       },
     },
     {
@@ -520,6 +564,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
       notes: "Editorial overview of heritage brand craft",
       content: {
         subtitle: "Preserving Craftsmanship in Modern Commerce",
+        imageUrl: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1000&q=80",
+        imageQuery: "minimalist natural stone architectural interior",
+        photographer: "Alesia Kazantceva",
       },
     },
     {
@@ -569,6 +616,9 @@ const THEME_DECKS: Record<string, SlideData[]> = {
           "Regenerative agriculture integrated across our supply ecosystem",
         ],
         icons: ["Award", "Shield", "Globe"],
+        imageUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
+        imageQuery: "misty emerald green forest nature",
+        photographer: "Sebastian Unrau",
       },
     },
     {
@@ -593,6 +643,8 @@ const THEME_DECKS: Record<string, SlideData[]> = {
         quote:
           "True luxury is patient; it honors the dedicated artisan of yesterday while preserving the earth for tomorrow.",
         attribution: "Julian de Montfort, Master Artisan",
+        imageUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80",
+        photographer: "Jurica Koletić",
       },
     },
     {
@@ -904,7 +956,9 @@ function TemplateCard({
   const [activeSlide, setActiveSlide] = useState<"title" | "content">("title");
   const deck = THEME_DECKS[theme.id] || THEME_DECKS.modern;
   const titleSlide = deck[0];
-  const contentSlide = deck[1] || deck[0];
+  const contentSlideIdx = deck.findIndex((s) => s.layout === "bullets" && s.content?.imageUrl);
+  const resolvedContentIdx = contentSlideIdx !== -1 ? contentSlideIdx : 1;
+  const contentSlide = deck[resolvedContentIdx] || deck[1] || deck[0];
   const currentSlide = activeSlide === "title" ? titleSlide : contentSlide;
 
   return (
@@ -944,7 +998,7 @@ function TemplateCard({
 
       {/* Real SlideRenderer preview with full-modal trigger hover overlay */}
       <div
-        onClick={() => onOpenPreview(theme.id, activeSlide === "title" ? 0 : 1)}
+        onClick={() => onOpenPreview(theme.id, activeSlide === "title" ? 0 : resolvedContentIdx)}
         className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100 cursor-pointer group/preview"
       >
         <SlideRenderer

@@ -77,6 +77,8 @@ export interface IDeck extends Document {
   chunkLease?: IChunkLease | null;
   error: string;
   includeImages?: boolean;
+  targetSlideCount?: number;
+  coverImage?: string;
   creditCharged: boolean;
   creditRefunded: boolean;
   createdAt: Date;
@@ -175,6 +177,8 @@ const DeckSchema = new Schema<IDeck>(
       totalTokens: { type: Number, default: 0 },
     },
     includeImages: { type: Boolean, default: true },
+    targetSlideCount: { type: Number, default: 10 },
+    coverImage: { type: String },
     error: { type: String, default: "" },
     creditCharged: { type: Boolean, default: false },
     creditRefunded: { type: Boolean, default: false },

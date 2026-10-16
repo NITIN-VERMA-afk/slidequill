@@ -6,6 +6,10 @@ import {
   sanitizeSlidePayload,
   buildFallbackBulletsSlide,
   validateAndSanitizeSourcePage,
+  isNumberInSource,
+  validateAndGroundChartSlide,
+  convertChartToFallbackLayout,
+  groundAndSanitizeSlide,
   SlideSchema,
 } from "../slides-schema";
 
@@ -235,6 +239,140 @@ describe("validateAndSanitizeSourcePage", () => {
     };
     const sanitizedNonPdf = sanitizeSlidePayload(nonPdfRaw, false, false, undefined, undefined);
     assert.equal(sanitizedNonPdf.sourcePage, undefined);
+  });
+});
+
+describe("Chart Data Integrity and Grounding", () => {
+  const sourceWithNumbers =
+    "In fiscal year 2025, Total ARR reached $20.4M, representing 21.0% YoY growth. Enterprise active users hit 48,000 across regions, and India revenue totaled ₹28.7Cr.";
+
+  it("isNumberInSource correctly matches formatted currency, percentage, and comma numbers", () => {
+    assert.equal(isNumberInSource(20.4, sourceWithNumbers), true, "20.4 should match $20.4M");
+    assert.equal(isNumberInSource(21, sourceWithNumbers), true, "21 should match 21.0%");
+    assert.equal(isNumberInSource(21.0, sourceWithNumbers), true, "21.0 should match 21.0%");
+    assert.equal(isNumberInSource(48000, sourceWithNumbers), true, "48000 should match 48,000");
+    assert.equal(isNumberInSource(28.7, sourceWithNumbers), true, "28.7 should match ₹28.7Cr");
+    assert.equal(isNumberInSource(99.9, sourceWithNumbers), false, "99.9 does not appear in source");
+    assert.equal(isNumberInSource(10, sourceWithNumbers), false, "10 does not appear in source");
+  });
+
+  it("allows chart slide when source excerpt contains >= 3 real grounded data points", () => {
+    const rawChart = {
+      layout: "chart",
+      title: "ARR Growth and User Metrics",
+      notes: "Speaker notes",
+      content: {
+        chartType: "bar",
+        chartTitle: "Key Performance Metrics",
+        categories: ["ARR (Millions)", "YoY Growth (%)", "India Revenue (Cr)"],
+        series: [
+          {
+            name: "Performance",
+            values: [20.4, 21.0, 28.7],
+          },
+        ],
+      },
+    };
+
+    const sanitized = sanitizeSlidePayload(rawChart, false, false, undefined, undefined, sourceWithNumbers);
+    assert.equal(sanitized.layout, "chart", "Chart with 3 grounded numbers should remain a chart");
+    assert.equal(sanitized.content.series[0].values.length, 3);
+    assert.deepEqual(sanitized.content.series[0].values, [20.4, 21.0, 28.7]);
+
+    const grounded = groundAndSanitizeSlide(sanitized, sourceWithNumbers);
+    assert.equal(grounded.layout, "chart");
+    assert.deepEqual(grounded.content.series[0].values, [20.4, 21.0, 28.7]);
+  });
+
+  it("converts chart to bullets when source text has NO numbers at all", () => {
+    const textWithoutNumbers =
+      "Our team focuses on operational excellence, customer empathy, cultural transparency, and disciplined execution.";
+
+    const rawChart = {
+      layout: "chart",
+      title: "Performance Trends",
+      notes: "Speaker notes",
+      content: {
+        chartType: "line",
+        categories: ["Q1", "Q2", "Q3", "Q4"],
+        series: [{ name: "Metric", values: [10, 20, 30, 40] }],
+      },
+    };
+
+    const sanitized = sanitizeSlidePayload(rawChart, false, false, undefined, undefined, textWithoutNumbers);
+    assert.equal(sanitized.layout, "bullets", "Chart must convert to bullets when source has no numbers");
+    assert.ok(sanitized.content.bullets.length >= 2, "Must produce valid bullet points");
+    // Verify schema passes
+    assert.doesNotThrow(() => SlideSchema.parse(sanitized));
+
+    // Also verify groundAndSanitizeSlide enforces this
+    const grounded = groundAndSanitizeSlide(rawChart, textWithoutNumbers);
+    assert.equal(grounded.layout, "bullets");
+    assert.doesNotThrow(() => SlideSchema.parse(grounded));
+  });
+
+  it("converts chart to stats or bullets when source has fewer than 3 real data points", () => {
+    const textWithTwoNumbers = "Total net revenue reached $20.4M, representing 21.0% growth.";
+
+    const rawChart = {
+      layout: "chart",
+      title: "Revenue Overview",
+      notes: "Speaker notes",
+      content: {
+        chartType: "bar",
+        categories: ["Total Net Revenue", "Year-over-Year Growth"],
+        series: [{ name: "Metric", values: [20.4, 21.0] }],
+      },
+    };
+
+    const sanitized = sanitizeSlidePayload(rawChart, false, false, undefined, undefined, textWithTwoNumbers);
+    // Fewer than 3 values: cannot remain a chart. Since 2 grounded points exist, converts to stats or bullets
+    assert.notEqual(sanitized.layout, "chart", "Chart with < 3 data points must not remain a chart");
+    assert.ok(sanitized.layout === "stats" || sanitized.layout === "bullets");
+    assert.doesNotThrow(() => SlideSchema.parse(sanitized));
+
+    const grounded = groundAndSanitizeSlide(rawChart, textWithTwoNumbers);
+    assert.notEqual(grounded.layout, "chart");
+    assert.doesNotThrow(() => SlideSchema.parse(grounded));
+  });
+
+  it("converts chart to bullets when plotted numbers do not appear in source text", () => {
+    const rawChartWithInventedNumbers = {
+      layout: "chart",
+      title: "Invented Metric Chart",
+      notes: "Speaker notes",
+      content: {
+        chartType: "bar",
+        categories: ["Metric A", "Metric B", "Metric C"],
+        series: [{ name: "Values", values: [100.5, 200.75, 300.2] }],
+      },
+    };
+
+    const sanitized = sanitizeSlidePayload(rawChartWithInventedNumbers, false, false, undefined, undefined, sourceWithNumbers);
+    assert.notEqual(sanitized.layout, "chart", "Invented numbers not in source must reject chart layout");
+    assert.equal(sanitized.layout, "bullets");
+    assert.doesNotThrow(() => SlideSchema.parse(sanitized));
+  });
+
+  it("never pads series with placeholder values of 10", () => {
+    const rawEmptyChart = {
+      layout: "chart",
+      title: "Empty Series Chart",
+      notes: "Speaker notes",
+      content: {
+        chartType: "bar",
+        categories: ["Category 1", "Category 2", "Category 3"],
+        series: [],
+      },
+    };
+
+    const sanitized = sanitizeSlidePayload(rawEmptyChart);
+    assert.notEqual(sanitized.layout, "chart", "Chart without series values must not remain a chart");
+    assert.equal(sanitized.layout, "bullets");
+    // Ensure no invented '10' values exist anywhere
+    const jsonStr = JSON.stringify(sanitized);
+    assert.equal(jsonStr.includes("10"), false, "Must never pad placeholder 10 values");
+    assert.doesNotThrow(() => SlideSchema.parse(sanitized));
   });
 });
 

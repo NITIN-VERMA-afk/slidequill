@@ -15,17 +15,28 @@ import {
   type SlideData,
 } from "@/lib/slides-schema";
 import type { OutlineSection } from "@/app/models/Deck";
-import { searchStockImage } from "@/lib/image-search";
+import { searchStockImage, validateAndCleanImageQuery, isDataHeavyBulletList } from "@/lib/image-search";
 import { getUserGenerationLimiter } from "@/lib/ratelimit";
 import { trackEvent, sanitizeAnalyticsErrorMessage } from "@/lib/analytics";
 import { getSourceExcerptForSection } from "@/lib/longdoc";
+import { planDeckLayouts, type SlideLayoutType } from "@/lib/layout-planner";
+
+export const maxDuration = 60;
 
 const SLIDES_MODEL = process.env.SLIDES_MODEL ?? "gpt-4o-mini";
 
 
 const SYSTEM_PROMPT = `You are a professional presentation slide generator.
 The user will provide a section from a presentation outline. Your task is to generate ONE beautifully designed slide for this section.
-Pick the best layout based on the content:
+
+LAYOUT DIVERSITY & PACING (CRITICAL REQUIREMENTS):
+- Never more than 40% bullet layouts in total across the presentation.
+- Never generate 3 consecutive slides with the same layout.
+- At least 1 stats/numbers slide per 6+ slides.
+- Exactly 1 title (slide 1) and 1 closing (last slide).
+- Adhere strictly to the ASSIGNED LAYOUT specified for this slide in the prompt.
+
+Pick the best layout based on the content and assigned layout:
 - Use "chart" when the source contains numeric data, metrics over time, percentages, or distributions.
 - Use "image" when the section is a dedicated visual showcase slide (split or full-bleed).
 - Use "stats" for 2-4 standalone key metrics (optionally select an icon name from the allowlist).
@@ -37,8 +48,13 @@ Pick the best layout based on the content:
 ALLOWED ICON NAMES:
 ["TrendingUp", "TrendingDown", "BarChart2", "PieChart", "Users", "Target", "Shield", "CheckCircle2", "Award", "Zap", "Globe", "DollarSign", "Briefcase", "Clock", "Activity", "Cpu", "Layers", "Compass", "Rocket", "Search", "Star", "Heart", "FileText", "Settings", "Lock", "Cloud", "Database", "Calendar", "Flag", "Lightbulb"]
 
-IMAGES & VISUAL ENHANCEMENT (CRITICAL REQUIREMENTS):
-- For "title", "bullets", "two_column", "quote", and "closing" layouts, you can optionally include an "imageQuery" (a specific 2 to 4 word search keyword for royalty-free stock photography, e.g. "modern office team", "cloud infrastructure servers", "financial skyscraper sunrise", "corporate strategy meeting").
+SPECIFIC IMAGERY & STOCK PHOTOGRAPHY (CRITICAL REQUIREMENTS):
+- Specificity: "imageQuery" MUST be a highly specific 2 to 4 word search keyword directly describing a concrete visual subject, NOT a generic topic.
+  - Good: "solar panel rooftop installation", "electric vehicle battery assembly", "biochemical laboratory microscope", "container shipping crane harbor".
+  - Strictly Forbidden: Generic 1-word abstracts like "data", "energy", "success", "technology", "business", "growth", "finance", "analytics", "abstract", "network", "cloud", "security", "teamwork", "ai", "money".
+  - Strictly Forbidden Prefixes: NEVER write "a photo of", "picture of", or "image of".
+- Deck Uniqueness: Every slide with an image in the deck MUST have a distinct, non-overlapping search query. No two slides in the same deck may use the exact same imageQuery.
+- Data-heavy exclusion: If a "bullets" slide is data-heavy (contains statistics, numbers, percentages, financial metrics), do NOT provide an "imageQuery". Text readability comes first!
 - "imagePlacement":
   - For "title" and "closing": choose "background" (atmospheric backdrop) or "right".
   - For "bullets" and "two_column": choose "right" (creates a modern side-by-side split layout with text on left and photo on right).
@@ -93,34 +109,83 @@ async function callOpenAI(messages: { role: "system" | "user" | "assistant"; con
   };
 }
 
+export interface DeckImageReport {
+  totalImages: number;
+  uniqueImages: number;
+  duplicateImages: number;
+  uniquenessRatio: number;
+}
+
 /**
- * Resolves images asynchronously for generated slides with bounded concurrency (3).
- * Leaves slides without an image upon lookup failure instead of attaching broken placeholders.
+ * Resolves images for generated slides, ensuring no duplicate photos across the deck.
+ * Queries 10 candidates from provider, selects first unused photo ID in deck, and caches queries for 24h.
  */
-export async function resolveDeckImages(slides: SlideData[]): Promise<void> {
-  const slidesNeedingImages = slides
-    .map((slide, idx) => ({ slide, idx }))
-    .filter(({ slide }) => {
-      const c = slide.content as any;
-      const query = c?.imageQuery || c?.imageKeyword;
-      return Boolean(query && (!c?.imageUrl || !c.imageUrl.startsWith("http")));
-    });
+export async function resolveDeckImages(slides: SlideData[]): Promise<DeckImageReport> {
+  const usedPhotoIds = new Set<string>();
+  const usedQueriesInDeck = new Set<string>();
 
-  if (slidesNeedingImages.length === 0) return;
-
-  await runWithConcurrency(slidesNeedingImages, 3, async ({ slide, idx }) => {
+  for (let idx = 0; idx < slides.length; idx++) {
+    const slide = slides[idx];
     const c = slide.content as any;
-    const query = (c.imageQuery || c.imageKeyword || slide.title || "").trim();
-    if (!query) return;
+    if (!c) continue;
+
+    // 1. Data-heavy bullet list check: skip image for readability
+    if (isDataHeavyBulletList(slide)) {
+      console.log(`[SlideImage] Slide ${idx + 1} (${slide.layout}): data-heavy bullet list detected; skipping image for readability.`);
+      delete c.imageQuery;
+      delete c.imageKeyword;
+      delete c.imageUrl;
+      delete c.photoId;
+      delete c.photographer;
+      delete c.photographerUrl;
+      c.imagePlacement = "none";
+      continue;
+    }
+
+    const rawQuery = (c.imageQuery || c.imageKeyword || (slide.layout === "title" ? slide.title : "")).trim();
+    if (!rawQuery || (c.imageUrl && c.imageUrl.startsWith("http"))) {
+      continue;
+    }
+
+    const isTitleOrClosing = slide.layout === "title" || slide.layout === "closing";
+
+    // 2. Validate and clean query (2-4 words, no banned abstracts, distinct across deck)
+    const validation = validateAndCleanImageQuery(rawQuery, usedQueriesInDeck);
+    if (!validation.valid) {
+      console.log(
+        `[SlideImage] Slide ${idx + 1} (${slide.layout}): query "${rawQuery}" rejected (${validation.reason}); skipping image.`
+      );
+      delete c.imageQuery;
+      delete c.imageKeyword;
+      delete c.imageUrl;
+      delete c.photoId;
+      delete c.photographer;
+      delete c.photographerUrl;
+      c.imagePlacement = "none";
+      continue;
+    }
+
+    const query = validation.query!;
+    usedQueriesInDeck.add(query.toLowerCase());
+    c.imageQuery = query;
+
     try {
-      const stock = await searchStockImage(query);
+      const stock = await searchStockImage(query, usedPhotoIds, {
+        isTitleOrClosing,
+        layout: slide.layout,
+        slideIdx: idx + 1,
+      });
       if (stock && stock.url) {
         c.imageUrl = stock.url;
+        c.photoId = stock.id;
         c.photographer = stock.photographer;
         c.photographerUrl = stock.photographerUrl;
-        console.log(
-          `[SlideImage] Slide ${idx + 1} (${slide.layout}): image resolved via provider '${stock.source}' (query: "${query}") -> ${stock.url}`
-        );
+      } else {
+        delete c.imageUrl;
+        delete c.photoId;
+        delete c.photographer;
+        delete c.photographerUrl;
+        c.imagePlacement = "none";
       }
     } catch (err) {
       console.warn(
@@ -128,8 +193,32 @@ export async function resolveDeckImages(slides: SlideData[]): Promise<void> {
         err
       );
       delete c.imageUrl;
+      delete c.photoId;
+      delete c.photographer;
+      delete c.photographerUrl;
+      c.imagePlacement = "none";
     }
-  });
+  }
+
+  // Calculate unique photos report
+  const resolvedUrls = slides
+    .map((s) => (s.content as any)?.imageUrl)
+    .filter(Boolean) as string[];
+  const totalImages = resolvedUrls.length;
+  const uniqueImages = new Set(resolvedUrls).size;
+  const duplicateImages = totalImages - uniqueImages;
+  const uniquenessRatio = totalImages > 0 ? uniqueImages / totalImages : 1.0;
+
+  console.log(
+    `[DeckImageReport] Total images: ${totalImages}, Unique: ${uniqueImages}, Duplicates: ${duplicateImages} (${(uniquenessRatio * 100).toFixed(1)}% unique)`
+  );
+
+  return {
+    totalImages,
+    uniqueImages,
+    duplicateImages,
+    uniquenessRatio,
+  };
 }
 
 interface GenerationMetrics {
@@ -149,7 +238,8 @@ async function generateSlide(
   metrics: GenerationMetrics,
   sourcePageCount?: number,
   sourceExcerpt?: string,
-  includeImages: boolean = true
+  includeImages: boolean = true,
+  assignedLayout?: SlideLayoutType
 ): Promise<SlideData> {
   let context = `Deck Title: ${deckTitle}\n\nSection Title: ${section.title}\nSection Points:\n${section.points
     .map((p) => `- ${p}`)
@@ -161,8 +251,9 @@ async function generateSlide(
     }):\n<source_excerpt>\n${sourceExcerpt}\n</source_excerpt>\nUse relevant numbers, statistics, and facts from this excerpt where appropriate.`;
   }
 
-  if (isFirst) context += `\n\n(This is the FIRST section. Please use the "title" layout.)`;
-  else if (isLast) context += `\n\n(This is the LAST section. Please use the "closing" layout.)`;
+  if (isFirst) context += `\n\n(This is the FIRST section. You MUST use the "title" layout.)`;
+  else if (isLast) context += `\n\n(This is the LAST section. You MUST use the "closing" layout.)`;
+  else if (assignedLayout) context += `\n\n(ASSIGNED LAYOUT: You MUST use the "${assignedLayout}" layout for this slide.)`;
 
   if (!includeImages) {
     context += `\n\n(Note: Stock images are DISABLED for this presentation. Do NOT produce any "imageQuery" or "imageKeyword".)`;
@@ -332,6 +423,17 @@ export async function POST(
   };
 
   try {
+    // 1. Deck-level layout plan step before per-slide generation to ensure deck-wide diversity
+    const layoutPlan = await planDeckLayouts(
+      deck.title,
+      deck.outline as OutlineSection[],
+      SLIDES_MODEL
+    );
+    console.log(
+      `[SlideGen] Deck ${deck._id} planned layouts:`,
+      layoutPlan.map((p) => `${p.index + 1}:${p.layout}`).join(" -> ")
+    );
+
     const results = await runWithConcurrency(
       deck.outline as OutlineSection[],
       4,
@@ -349,7 +451,8 @@ export async function POST(
           metrics,
           deck.sourcePageCount,
           excerpt,
-          deck.includeImages !== false
+          deck.includeImages !== false,
+          layoutPlan[index]?.layout
         );
 
       }
@@ -367,11 +470,15 @@ export async function POST(
       `[SlideGen] Deck ${deck._id} generation completed: ${validSlides.length} slides, ${metrics.truncations} truncations, ${metrics.retries} retries, ${metrics.fallbacks} fallbacks, ${metrics.totalTokens} tokens.`
     );
 
+    const firstSlideWithImg = validSlides.find((s) => (s.content as any)?.imageUrl);
+    const coverImage = firstSlideWithImg ? (firstSlideWithImg.content as any).imageUrl : undefined;
+
     await Deck.updateOne(
       { _id: deck._id },
       {
         $set: {
           slides: validSlides,
+          coverImage,
           status: "ready",
           "tokenUsage.generatePromptTokens": metrics.promptTokens,
           "tokenUsage.generateCompletionTokens": metrics.completionTokens,

@@ -1,0 +1,1840 @@
+[
+  {
+    "fixture": "5-page.txt",
+    "label": "Q3 Business Review",
+    "theme": "modern",
+    "chars": 5722,
+    "generationTimeMs": 26670,
+    "slideCount": 6,
+    "scalingTarget": 6,
+    "layoutDistribution": {
+      "title": 1,
+      "stats": 1,
+      "bullets": 1,
+      "process": 1,
+      "two_column": 1,
+      "closing": 1
+    },
+    "bulletPct": 17,
+    "statsOrChartCount": 1,
+    "hasStatsOrChart": true,
+    "validPlan": true,
+    "planViolations": [],
+    "totalImages": 3,
+    "uniqueImages": 3,
+    "duplicatePhotos": 0,
+    "fallbackSlides": 0,
+    "pptxPath": "e:\\projects\\Slidequill\\slidequill\\exports\\rerun\\5-page.pptx",
+    "slides": [
+      {
+        "idx": 1,
+        "layout": "title",
+        "title": "Driving Growth Through Strategic Performance Insights",
+        "content": {
+          "subtitle": "A Comprehensive Overview of Our Executive Performance",
+          "imageQuery": "dynamic business growth",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1543286386-2e659306cd6c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZHluYW1pYyUyMGJ1c2luZXNzJTIwZ3Jvd3RofGVufDB8MHx8fDE3OTIxMzI3MDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "AT77Q0Njnt0",
+          "photographer": "Isaac Smith",
+          "photographerUrl": "https://unsplash.com/@isaacmsmith"
+        },
+        "hasImage": true,
+        "imageQuery": "dynamic business growth",
+        "photoId": "AT77Q0Njnt0",
+        "photographer": "Isaac Smith"
+      },
+      {
+        "idx": 2,
+        "layout": "stats",
+        "title": "Impressive Growth in Key Metrics",
+        "content": {
+          "stats": [
+            {
+              "value": "$52.0M",
+              "label": "Annual Recurring Revenue (ARR) in Q3"
+            },
+            {
+              "value": "120.0%",
+              "label": "Net Revenue Retention (NRR) Rate"
+            },
+            {
+              "value": "48,000",
+              "label": "Daily Active Enterprise Users"
+            },
+            {
+              "value": "$10.8M",
+              "label": "Operating Cash Flow from Core Operations"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 3,
+        "layout": "bullets",
+        "title": "Maximizing User Engagement and Reliability Metrics",
+        "content": {
+          "bullets": [
+            "Daily Active Enterprise Users: 48,000 across 34 countries.",
+            "Infrastructure uptime: 99.98% SLA compliance.",
+            "Strong user engagement drives revenue growth.",
+            "Operational efficiency enhances service reliability."
+          ],
+          "imageQuery": "data analytics visualization",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1666875753105-c63a6f3bdc86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZGF0YSUyMGFuYWx5dGljcyUyMHZpc3VhbGl6YXRpb258ZW58MHwwfHx8MTc5MjA4NjE1OXww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "-WXQm_NTK0U",
+          "photographer": "Deng Xiang",
+          "photographerUrl": "https://unsplash.com/@dengxiangs"
+        },
+        "hasImage": true,
+        "imageQuery": "data analytics visualization",
+        "photoId": "-WXQm_NTK0U",
+        "photographer": "Deng Xiang",
+        "bulletCount": 4
+      },
+      {
+        "idx": 4,
+        "layout": "process",
+        "title": "Optimizing Operating Cash Flow Steps",
+        "content": {
+          "steps": [
+            {
+              "label": "Analyze Cash Flow Trends",
+              "desc": "Description"
+            },
+            {
+              "label": "Identify Core Operations",
+              "desc": "Description"
+            },
+            {
+              "label": "Implement Efficiency Measures",
+              "desc": "Description"
+            },
+            {
+              "label": "Monitor Performance Regularly",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 5,
+        "layout": "two_column",
+        "title": "Strategic Priorities for Future Growth",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 6,
+        "layout": "closing",
+        "title": "Commitment to Excellence in Compliance",
+        "content": {
+          "headline": "Commitment to Excellence in Compliance",
+          "imageQuery": "security technology",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8c2VjdXJpdHklMjB0ZWNobm9sb2d5fGVufDB8MHx8fDE3OTIxMzI3MDN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "mT7lXZPjk7U",
+          "photographer": "FlyD",
+          "photographerUrl": "https://unsplash.com/@flyd2069"
+        },
+        "hasImage": true,
+        "imageQuery": "security technology",
+        "photoId": "mT7lXZPjk7U",
+        "photographer": "FlyD"
+      }
+    ]
+  },
+  {
+    "fixture": "30-page.txt",
+    "label": "Enterprise Portfolio Strategy",
+    "theme": "corporate",
+    "chars": 34674,
+    "generationTimeMs": 46620,
+    "slideCount": 14,
+    "scalingTarget": 14,
+    "layoutDistribution": {
+      "title": 1,
+      "stats": 1,
+      "bullets": 5,
+      "chart": 1,
+      "two_column": 1,
+      "process": 1,
+      "quote": 1,
+      "comparison": 1,
+      "image": 1,
+      "closing": 1
+    },
+    "bulletPct": 36,
+    "statsOrChartCount": 2,
+    "hasStatsOrChart": true,
+    "validPlan": true,
+    "planViolations": [],
+    "totalImages": 9,
+    "uniqueImages": 9,
+    "duplicatePhotos": 0,
+    "fallbackSlides": 0,
+    "pptxPath": "e:\\projects\\Slidequill\\slidequill\\exports\\rerun\\30-page.pptx",
+    "slides": [
+      {
+        "idx": 1,
+        "layout": "title",
+        "title": "Unlocking Growth Through Strategic Portfolio Management",
+        "content": {
+          "subtitle": "Understanding the foundation of enterprise success",
+          "imageQuery": "strategic roadmap",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1620325867502-221cfb5faa5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8c3RyYXRlZ2ljJTIwcm9hZG1hcHxlbnwwfDB8fHwxNzkyMTMyNzQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "Ax8IA8GAjVg",
+          "photographer": "Brands&People",
+          "photographerUrl": "https://unsplash.com/@brandsandpeople"
+        },
+        "hasImage": true,
+        "imageQuery": "strategic roadmap",
+        "photoId": "Ax8IA8GAjVg",
+        "photographer": "Brands&People"
+      },
+      {
+        "idx": 2,
+        "layout": "stats",
+        "title": "Impressive Year-Over-Year Performance Highlights",
+        "content": {
+          "stats": [
+            {
+              "value": "$20.4M",
+              "label": "Q4 Total Net Revenue"
+            },
+            {
+              "value": "+21.0%",
+              "label": "Year-over-Year Revenue Growth"
+            },
+            {
+              "value": "121.0%",
+              "label": "Net Revenue Retention Rate"
+            },
+            {
+              "value": "99.98%",
+              "label": "Infrastructure Reliability"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 3,
+        "layout": "bullets",
+        "title": "Quarterly Revenue Insights Drive Strategic Decisions",
+        "content": {
+          "bullets": [
+            "Q1 revenue: $23.2M, 22% YoY growth",
+            "Q2 revenue: $26.0M, 18% YoY growth",
+            "Q3 revenue: $28.8M, 19% YoY growth",
+            "Q4 revenue: $31.6M, 20% YoY growth"
+          ],
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1591696205602-2f950c417cb9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "IrRbSND5EUc",
+          "photographer": "Markus Winkler",
+          "photographerUrl": "https://unsplash.com/@markuswinkler"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "IrRbSND5EUc",
+        "photographer": "Markus Winkler",
+        "bulletCount": 4
+      },
+      {
+        "idx": 4,
+        "layout": "chart",
+        "title": "Annual Recurring Revenue Growth Trends",
+        "content": {
+          "chartType": "line",
+          "categories": [
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 5,
+        "layout": "bullets",
+        "title": "Unlocking Revenue Through Customer Retention",
+        "content": {
+          "bullets": [
+            "NRR stands at 126% for Fortune 500 clients.",
+            "Customer retention boosts overall revenue growth.",
+            "Strong performance indicates market leadership.",
+            "Strategic focus on enhancing customer experience."
+          ],
+          "imageQuery": "customer retention strategy",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1533750349088-cd871a92f312?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8Y3VzdG9tZXIlMjByZXRlbnRpb24lMjBzdHJhdGVneXxlbnwwfDB8fHwxNzkyMTMyNzQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "yktK2qaiVHI",
+          "photographer": "Campaign Creators",
+          "photographerUrl": "https://unsplash.com/@campaign_creators"
+        },
+        "hasImage": true,
+        "imageQuery": "customer retention strategy",
+        "photoId": "yktK2qaiVHI",
+        "photographer": "Campaign Creators",
+        "bulletCount": 4
+      },
+      {
+        "idx": 6,
+        "layout": "two_column",
+        "title": "Active User Growth Insights",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 7,
+        "layout": "bullets",
+        "title": "Maximizing Infrastructure Reliability for Success",
+        "content": {
+          "bullets": [
+            "Uptime SLA compliance: 99.98% across regions.",
+            "Reliability is crucial for business continuity.",
+            "Enhanced performance drives customer trust.",
+            "Investing in infrastructure yields long-term gains."
+          ],
+          "imageQuery": "high-tech data center",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1584169417032-d34e8d805e8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8aGlnaC10ZWNoJTIwZGF0YSUyMGNlbnRlcnxlbnwwfDB8fHwxNzkyMTMyNzQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "lVZjvw-u9V8",
+          "photographer": "İsmail Enes Ayhan",
+          "photographerUrl": "https://unsplash.com/@ismailenesayhan"
+        },
+        "hasImage": true,
+        "imageQuery": "high-tech data center",
+        "photoId": "lVZjvw-u9V8",
+        "photographer": "İsmail Enes Ayhan",
+        "bulletCount": 4
+      },
+      {
+        "idx": 8,
+        "layout": "process",
+        "title": "Steps to Enhance Operating Cash Flow",
+        "content": {
+          "steps": [
+            {
+              "label": "Analyze Cash Flow Trends",
+              "desc": "Description"
+            },
+            {
+              "label": "Optimize Operational Efficiency",
+              "desc": "Description"
+            },
+            {
+              "label": "Enhance Revenue Streams",
+              "desc": "Description"
+            },
+            {
+              "label": "Monitor Financial Health",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 9,
+        "layout": "bullets",
+        "title": "Embracing Future Strategic Priorities",
+        "content": {
+          "bullets": [
+            "Enhancing platform automation for efficiency gains.",
+            "Leveraging AI for optimized workload management.",
+            "Expanding partner ecosystem for broader distribution.",
+            "Conducting security audits for compliance assurance."
+          ],
+          "imageQuery": "technology automation",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8dGVjaG5vbG9neSUyMGF1dG9tYXRpb258ZW58MHwwfHx8MTc5MjEzMjc0OHww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "EUsVwEOsblE",
+          "photographer": "Adi Goldstein",
+          "photographerUrl": "https://unsplash.com/@adigold1"
+        },
+        "hasImage": true,
+        "imageQuery": "technology automation",
+        "photoId": "EUsVwEOsblE",
+        "photographer": "Adi Goldstein",
+        "bulletCount": 4
+      },
+      {
+        "idx": 10,
+        "layout": "quote",
+        "title": "Security is Non-Negotiable for Success",
+        "content": {
+          "quote": "Our commitment to security audits and SOC2 Type II certifications ensures the highest standards of compliance and trust.",
+          "attribution": "Enterprise Leadership Team",
+          "imageQuery": "cybersecurity shield",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1751448555253-f39c06e29d82?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8Y3liZXJzZWN1cml0eSUyMHNoaWVsZHxlbnwwfDB8fHwxNzkyMDg2MTYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "-nBClEqKKVM",
+          "photographer": "Zulfugar Karimov",
+          "photographerUrl": "https://unsplash.com/@zulfugarkarimov"
+        },
+        "hasImage": true,
+        "imageQuery": "cybersecurity shield",
+        "photoId": "-nBClEqKKVM",
+        "photographer": "Zulfugar Karimov"
+      },
+      {
+        "idx": 11,
+        "layout": "bullets",
+        "title": "Harness AI for Strategic Optimization",
+        "content": {
+          "bullets": [
+            "Utilization of AI for workload optimization",
+            "Enhancing efficiency through predictive analytics",
+            "Integrating future technologies into strategy",
+            "Driving innovation with AI-powered insights"
+          ],
+          "imageQuery": "AI technology in action",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1694903089438-bf28d4697d9a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8YWklMjB0ZWNobm9sb2d5JTIwaW4lMjBhY3Rpb258ZW58MHwwfHx8MTc5MjEzMjc0OXww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "FHgWFzDDAOs",
+          "photographer": "Igor Omilaev",
+          "photographerUrl": "https://unsplash.com/@omilaev"
+        },
+        "hasImage": true,
+        "imageQuery": "AI technology in action",
+        "photoId": "FHgWFzDDAOs",
+        "photographer": "Igor Omilaev",
+        "bulletCount": 4
+      },
+      {
+        "idx": 12,
+        "layout": "comparison",
+        "title": "Strategic Partner Ecosystem Growth Insights",
+        "content": {
+          "columns": [
+            {
+              "heading": "Current State",
+              "bullets": [
+                "Point 1",
+                "Point 2"
+              ]
+            },
+            {
+              "heading": "Future Goals",
+              "bullets": [
+                "Point 1",
+                "Point 2"
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 13,
+        "layout": "image",
+        "title": "Maximizing Operational Efficiency for Growth",
+        "content": {
+          "variant": "split",
+          "imageUrl": "https://images.unsplash.com/photo-1546437593-3d0258c28037?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZHluYW1pYyUyMG9wZXJhdGlvbmFsJTIwcHJvY2Vzc2VzfGVufDB8MHx8fDE3OTIxMzI3NDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "imageKeyword": "dynamic operational processes",
+          "imageQuery": "dynamic operational processes",
+          "imagePlacement": "background",
+          "photographer": "Jason Coudriet",
+          "photographerUrl": "https://unsplash.com/@jcoudriet",
+          "photoId": "c-7iDdmWvF4"
+        },
+        "hasImage": true,
+        "imageQuery": "dynamic operational processes",
+        "photoId": "c-7iDdmWvF4",
+        "photographer": "Jason Coudriet"
+      },
+      {
+        "idx": 14,
+        "layout": "closing",
+        "title": "Embrace the Future of Enterprise Strategy",
+        "content": {
+          "headline": "Embrace the Future of Enterprise Strategy",
+          "imageQuery": "dynamic technology landscape",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZHluYW1pYyUyMHRlY2hub2xvZ3klMjBsYW5kc2NhcGV8ZW58MHwwfHx8MTc5MjA4NjE2M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "xuTJZ7uD7PI",
+          "photographer": "Conny Schneider",
+          "photographerUrl": "https://unsplash.com/@choys_"
+        },
+        "hasImage": true,
+        "imageQuery": "dynamic technology landscape",
+        "photoId": "xuTJZ7uD7PI",
+        "photographer": "Conny Schneider"
+      }
+    ]
+  },
+  {
+    "fixture": "80-page.txt",
+    "label": "Multi-Division Annual Report",
+    "theme": "elegant",
+    "chars": 86211,
+    "generationTimeMs": 54292,
+    "slideCount": 18,
+    "scalingTarget": 18,
+    "layoutDistribution": {
+      "title": 1,
+      "bullets": 6,
+      "two_column": 3,
+      "process": 5,
+      "chart": 2,
+      "closing": 1
+    },
+    "bulletPct": 33,
+    "statsOrChartCount": 2,
+    "hasStatsOrChart": true,
+    "validPlan": true,
+    "planViolations": [],
+    "totalImages": 8,
+    "uniqueImages": 8,
+    "duplicatePhotos": 0,
+    "fallbackSlides": 0,
+    "pptxPath": "e:\\projects\\Slidequill\\slidequill\\exports\\rerun\\80-page.pptx",
+    "slides": [
+      {
+        "idx": 1,
+        "layout": "title",
+        "title": "Unveiling Our Annual Strategic Insights",
+        "content": {
+          "subtitle": "A Comprehensive Overview of Performance and Future Directions",
+          "imageQuery": "strategic planning board",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1529119368496-2dfda6ec2804?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8c3RyYXRlZ2ljJTIwcGxhbm5pbmclMjBib2FyZHxlbnwwfDB8fHwxNzkyMTMyODAwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "7tXA8xwe4W4",
+          "photographer": "Startaê Team",
+          "photographerUrl": "https://unsplash.com/@startaeteam"
+        },
+        "hasImage": true,
+        "imageQuery": "strategic planning board",
+        "photoId": "7tXA8xwe4W4",
+        "photographer": "Startaê Team"
+      },
+      {
+        "idx": 2,
+        "layout": "bullets",
+        "title": "Driving Global Corporate Success Together",
+        "content": {
+          "bullets": [
+            "Define our mission and vision for impact.",
+            "Set strategic goals targeting 2026 milestones.",
+            "Enhance operational efficiencies across divisions.",
+            "Empower workforce through integration initiatives."
+          ],
+          "imageQuery": "global corporate strategy",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1476304884326-cd2c88572c5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8Z2xvYmFsJTIwY29ycG9yYXRlJTIwc3RyYXRlZ3l8ZW58MHwwfHx8MTc5MjEzMjgwMXww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "gEKMstKfZ6w",
+          "photographer": "Ben White",
+          "photographerUrl": "https://unsplash.com/@benwhitephotography"
+        },
+        "hasImage": true,
+        "imageQuery": "global corporate strategy",
+        "photoId": "gEKMstKfZ6w",
+        "photographer": "Ben White",
+        "bulletCount": 4
+      },
+      {
+        "idx": 3,
+        "layout": "two_column",
+        "title": "Division 1: Performance Insights & Efficiency Gains",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 4,
+        "layout": "bullets",
+        "title": "Key Metrics for Division 1 Success",
+        "content": {
+          "bullets": [
+            "Annualized Run Rate: $38.0M across key accounts.",
+            "Gross Margin Ratio: 71.0% after overhead costs.",
+            "Active User Base: 12,000 credentialed seats globally.",
+            "Capital Expenditure: $2.8M for automation upgrades."
+          ],
+          "imageQuery": "financial performance metrics",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1591696205602-2f950c417cb9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZmluYW5jaWFsJTIwcGVyZm9ybWFuY2UlMjBtZXRyaWNzfGVufDB8MHx8fDE3OTIxMzI4MDJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "IrRbSND5EUc",
+          "photographer": "Markus Winkler",
+          "photographerUrl": "https://unsplash.com/@markuswinkler"
+        },
+        "hasImage": true,
+        "imageQuery": "financial performance metrics",
+        "photoId": "IrRbSND5EUc",
+        "photographer": "Markus Winkler",
+        "bulletCount": 4
+      },
+      {
+        "idx": 5,
+        "layout": "process",
+        "title": "Strategic Steps for Division 1's Future",
+        "content": {
+          "steps": [
+            {
+              "label": "Cross-Regional Integration",
+              "desc": "Description"
+            },
+            {
+              "label": "Workforce Empowerment Initiatives",
+              "desc": "Description"
+            },
+            {
+              "label": "Security Verification",
+              "desc": "Description"
+            },
+            {
+              "label": "Milestone Tracking",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 6,
+        "layout": "bullets",
+        "title": "Key Highlights of Division 2 Performance",
+        "content": {
+          "bullets": [
+            "Net revenue growth at $26.3M, up 15.0%.",
+            "Capital allocation efficiency improved by 11.4%.",
+            "Annualized run rate reached $40.2M.",
+            "Gross margin ratio stands at 72.0%."
+          ],
+          "imageQuery": "financial performance graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZmluYW5jaWFsJTIwcGVyZm9ybWFuY2UlMjBncmFwaHxlbnwwfDB8fHwxNzkyMTMyODAzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "N__BnvQ_w18",
+          "photographer": "Nick Chong",
+          "photographerUrl": "https://unsplash.com/@nick604"
+        },
+        "hasImage": true,
+        "imageQuery": "financial performance graph",
+        "photoId": "N__BnvQ_w18",
+        "photographer": "Nick Chong",
+        "bulletCount": 4
+      },
+      {
+        "idx": 7,
+        "layout": "chart",
+        "title": "Key Metrics for Division 2 Performance",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "Annualized Run Rate",
+            "Gross Margin Ratio"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 8,
+        "layout": "process",
+        "title": "Strategic Steps for Division 2's Growth",
+        "content": {
+          "steps": [
+            {
+              "label": "Cross-Regional Integration",
+              "desc": "Description"
+            },
+            {
+              "label": "Workforce Empowerment",
+              "desc": "Description"
+            },
+            {
+              "label": "Security Verification",
+              "desc": "Description"
+            },
+            {
+              "label": "Resource Allocation",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 9,
+        "layout": "bullets",
+        "title": "Key Performance Insights for Division 3",
+        "content": {
+          "bullets": [
+            "Net revenue reached $28.1M, growing 16.0%.",
+            "Capital allocation efficiency improved by 11.4%.",
+            "73.0% gross margin ratio achieved.",
+            "12,900 active users across global accounts."
+          ],
+          "imageQuery": "financial growth chart",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1543286386-2e659306cd6c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8Mnx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwY2hhcnR8ZW58MHwwfHx8MTc5MjEzMjgwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "AT77Q0Njnt0",
+          "photographer": "Isaac Smith",
+          "photographerUrl": "https://unsplash.com/@isaacmsmith"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth chart",
+        "photoId": "AT77Q0Njnt0",
+        "photographer": "Isaac Smith",
+        "bulletCount": 4
+      },
+      {
+        "idx": 10,
+        "layout": "two_column",
+        "title": "Key Metrics for Division 3 Performance",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 11,
+        "layout": "process",
+        "title": "Strategic Steps for Division 3's Future",
+        "content": {
+          "steps": [
+            {
+              "label": "Cross-Regional Integration",
+              "desc": "Description"
+            },
+            {
+              "label": "Workforce Empowerment",
+              "desc": "Description"
+            },
+            {
+              "label": "Security Verification",
+              "desc": "Description"
+            },
+            {
+              "label": "Milestone Tracking",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 12,
+        "layout": "bullets",
+        "title": "Key Performance Insights for Division 4",
+        "content": {
+          "bullets": [
+            "Net revenue growth reached $29.9M, up 17.0%.",
+            "Capital allocation efficiency improved by 11.4%.",
+            "Gross margin ratio achieved 74.0% post overhead.",
+            "Total active user base expanded to 13,350 seats."
+          ],
+          "imageQuery": "financial growth chart",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8M3x8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwY2hhcnR8ZW58MHwwfHx8MTc5MjEzMjgwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "fiXLQXAhCfk",
+          "photographer": "Maxim Hopman",
+          "photographerUrl": "https://unsplash.com/@nampoh"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth chart",
+        "photoId": "fiXLQXAhCfk",
+        "photographer": "Maxim Hopman",
+        "bulletCount": 4
+      },
+      {
+        "idx": 13,
+        "layout": "chart",
+        "title": "Key Metrics for Division 4 Performance",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "Annualized Run Rate",
+            "Gross Margin Ratio"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 14,
+        "layout": "process",
+        "title": "Strategic Steps for Division 4's Future",
+        "content": {
+          "steps": [
+            {
+              "label": "Cross-Regional Integration",
+              "desc": "Description"
+            },
+            {
+              "label": "Workforce Empowerment",
+              "desc": "Description"
+            },
+            {
+              "label": "Security Verification",
+              "desc": "Description"
+            },
+            {
+              "label": "Scalable Automation",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 15,
+        "layout": "bullets",
+        "title": "Key Performance Insights for Division 5",
+        "content": {
+          "bullets": [
+            "Net revenue growth at 18.0%, reaching $31.7M.",
+            "Capital allocation efficiency improved by 11.4%.",
+            "Core operating efficiencies drive sustainable margins.",
+            "Total active user base: 13,800 globally."
+          ],
+          "imageQuery": "financial growth chart",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1543286386-713bdd548da4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8NHx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwY2hhcnR8ZW58MHwwfHx8MTc5MjEzMjgwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "6EnTPvPPL6I",
+          "photographer": "Isaac Smith",
+          "photographerUrl": "https://unsplash.com/@isaacmsmith"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth chart",
+        "photoId": "6EnTPvPPL6I",
+        "photographer": "Isaac Smith",
+        "bulletCount": 4
+      },
+      {
+        "idx": 16,
+        "layout": "two_column",
+        "title": "Division 5 Performance Highlights",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 17,
+        "layout": "process",
+        "title": "Strategic Path Forward for Division 5",
+        "content": {
+          "steps": [
+            {
+              "label": "Cross-Regional Integration",
+              "desc": "Description"
+            },
+            {
+              "label": "Workforce Empowerment",
+              "desc": "Description"
+            },
+            {
+              "label": "Security Verification",
+              "desc": "Description"
+            },
+            {
+              "label": "Milestone Tracking",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 18,
+        "layout": "closing",
+        "title": "Embrace Growth and Innovation Together",
+        "content": {
+          "headline": "Embrace Growth and Innovation Together",
+          "imageQuery": "team collaboration",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8dGVhbSUyMGNvbGxhYm9yYXRpb258ZW58MHwwfHx8MTc5MjEzMjgwNHww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "Zyx1bK9mqmA",
+          "photographer": "Hannah Busing",
+          "photographerUrl": "https://unsplash.com/@hannahbusing"
+        },
+        "hasImage": true,
+        "imageQuery": "team collaboration",
+        "photoId": "Zyx1bK9mqmA",
+        "photographer": "Hannah Busing"
+      }
+    ]
+  },
+  {
+    "fixture": "30-page-mixed.txt",
+    "label": "India Market Dynamics (Mixed)",
+    "theme": "playful",
+    "chars": 30496,
+    "generationTimeMs": 49947,
+    "slideCount": 14,
+    "scalingTarget": 14,
+    "layoutDistribution": {
+      "title": 1,
+      "stats": 2,
+      "bullets": 4,
+      "process": 1,
+      "chart": 2,
+      "two_column": 1,
+      "image": 1,
+      "quote": 1,
+      "closing": 1
+    },
+    "bulletPct": 29,
+    "statsOrChartCount": 4,
+    "hasStatsOrChart": true,
+    "validPlan": true,
+    "planViolations": [],
+    "totalImages": 8,
+    "uniqueImages": 8,
+    "duplicatePhotos": 0,
+    "fallbackSlides": 0,
+    "pptxPath": "e:\\projects\\Slidequill\\slidequill\\exports\\rerun\\30-page-mixed.pptx",
+    "slides": [
+      {
+        "idx": 1,
+        "layout": "title",
+        "title": "Unlocking Growth Through Bilingual Market Strategies",
+        "content": {
+          "subtitle": "Understanding the Impact on Business Performance",
+          "imageQuery": "colorful Indian market",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1594761047831-e95256994bcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8Y29sb3JmdWwlMjBpbmRpYW4lMjBtYXJrZXR8ZW58MHwwfHx8MTc5MjEzMjg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "qiZNQ6gWRwY",
+          "photographer": "Belle Maluf",
+          "photographerUrl": "https://unsplash.com/@bellemaluf"
+        },
+        "hasImage": true,
+        "imageQuery": "colorful Indian market",
+        "photoId": "qiZNQ6gWRwY",
+        "photographer": "Belle Maluf"
+      },
+      {
+        "idx": 2,
+        "layout": "stats",
+        "title": "Key Performance Metrics for Executive Review",
+        "content": {
+          "stats": [
+            {
+              "value": "$14.8M",
+              "label": "Total Net Revenue Q2 Fiscal Year"
+            },
+            {
+              "value": "19.0%",
+              "label": "Year-over-Year Revenue Growth Rate"
+            },
+            {
+              "value": "119.0%",
+              "label": "Net Revenue Retention Rate"
+            },
+            {
+              "value": "46,500",
+              "label": "Daily Active Enterprise Users"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 3,
+        "layout": "bullets",
+        "title": "Key Financial Metrics Driving Growth",
+        "content": {
+          "bullets": [
+            "Annual Recurring Revenue (ARR): $48.5M",
+            "Net Revenue Retention: 119% for Fortune 500",
+            "Daily Active Users: 46,500 across 34 countries",
+            "Infrastructure Reliability: 99.98% uptime"
+          ],
+          "imageQuery": "financial data visualization",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZmluYW5jaWFsJTIwZGF0YSUyMHZpc3VhbGl6YXRpb258ZW58MHwwfHx8MTc5MjEzMjg1MHww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "N__BnvQ_w18",
+          "photographer": "Nick Chong",
+          "photographerUrl": "https://unsplash.com/@nick604"
+        },
+        "hasImage": true,
+        "imageQuery": "financial data visualization",
+        "photoId": "N__BnvQ_w18",
+        "photographer": "Nick Chong",
+        "bulletCount": 4
+      },
+      {
+        "idx": 4,
+        "layout": "process",
+        "title": "Key Steps for Future Strategic Priorities",
+        "content": {
+          "steps": [
+            {
+              "label": "Enhance Platform Automation",
+              "desc": "Description"
+            },
+            {
+              "label": "Implement AI Optimization",
+              "desc": "Description"
+            },
+            {
+              "label": "Expand Partner Ecosystem",
+              "desc": "Description"
+            },
+            {
+              "label": "Conduct Security Audits",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 5,
+        "layout": "chart",
+        "title": "Explosive Growth of India's Digital Economy",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "Digital Payments Growth",
+            "UPI Transactions Growth",
+            "Internet Users in Tier…"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 6,
+        "layout": "bullets",
+        "title": "Key Operational Metrics Driving Growth",
+        "content": {
+          "bullets": [
+            "Gross Merchandise Value (GMV): ₹4,250 Crores, 32% YoY growth.",
+            "Customer Acquisition Cost: ₹420, down 18% from last year.",
+            "Active Users: 2.45 million annual customers.",
+            "Retention Rate: 78.4% customer renewal rate."
+          ],
+          "imageQuery": "digital economy growth",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZGlnaXRhbCUyMGVjb25vbXklMjBncm93dGh8ZW58MHwwfHx8MTc5MjEzMjg1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "xuTJZ7uD7PI",
+          "photographer": "Conny Schneider",
+          "photographerUrl": "https://unsplash.com/@choys_"
+        },
+        "hasImage": true,
+        "imageQuery": "digital economy growth",
+        "photoId": "xuTJZ7uD7PI",
+        "photographer": "Conny Schneider",
+        "bulletCount": 4
+      },
+      {
+        "idx": 7,
+        "layout": "two_column",
+        "title": "Strategic Goals for the Upcoming Year",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 8,
+        "layout": "stats",
+        "title": "Quarterly Revenue Growth Highlights",
+        "content": {
+          "stats": [
+            {
+              "value": "$20.4M",
+              "label": "Total Net Revenue for Q4"
+            },
+            {
+              "value": "21.0%",
+              "label": "Year-over-Year Revenue Growth"
+            },
+            {
+              "value": "71.0%",
+              "label": "Gross Margin Percentage"
+            },
+            {
+              "value": "121.0%",
+              "label": "Net Revenue Retention Rate"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 9,
+        "layout": "bullets",
+        "title": "Key Metrics for Client Retention and Growth",
+        "content": {
+          "bullets": [
+            "Net Revenue Retention (NRR): 121% among Fortune 500 clients.",
+            "Daily Active Users: 49,500 across 34 countries.",
+            "Annual Recurring Revenue (ARR): $55.5M from enterprises.",
+            "Gross Margins: Resilient at 71% operational efficiency."
+          ],
+          "imageQuery": "dynamic user engagement",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1546437593-3d0258c28037?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZHluYW1pYyUyMHVzZXIlMjBlbmdhZ2VtZW50fGVufDB8MHx8fDE3OTIxMzI4NTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "c-7iDdmWvF4",
+          "photographer": "Jason Coudriet",
+          "photographerUrl": "https://unsplash.com/@jcoudriet"
+        },
+        "hasImage": true,
+        "imageQuery": "dynamic user engagement",
+        "photoId": "c-7iDdmWvF4",
+        "photographer": "Jason Coudriet",
+        "bulletCount": 4
+      },
+      {
+        "idx": 10,
+        "layout": "image",
+        "title": "Ensuring Infrastructure Reliability for Growth",
+        "content": {
+          "variant": "split",
+          "imageUrl": "https://images.unsplash.com/photo-1584169417032-d34e8d805e8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8aGlnaC10ZWNoJTIwZGF0YSUyMGNlbnRlcnxlbnwwfDB8fHwxNzkyMTMyNzQ3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+          "imageKeyword": "high-tech data center",
+          "imageQuery": "high-tech data center",
+          "imagePlacement": "background",
+          "photographer": "İsmail Enes Ayhan",
+          "photographerUrl": "https://unsplash.com/@ismailenesayhan",
+          "photoId": "lVZjvw-u9V8"
+        },
+        "hasImage": true,
+        "imageQuery": "high-tech data center",
+        "photoId": "lVZjvw-u9V8",
+        "photographer": "İsmail Enes Ayhan"
+      },
+      {
+        "idx": 11,
+        "layout": "chart",
+        "title": "Digital Payment Growth in India",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "Total Transactions (FY…",
+            "Internet Users in Tier…"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 12,
+        "layout": "bullets",
+        "title": "Driving Growth Through Technology Investments",
+        "content": {
+          "bullets": [
+            "Emphasis on AI and automation for efficiency.",
+            "Investing in future technology initiatives.",
+            "Enhancing digital payment systems and UPI transactions.",
+            "Expanding internet access in tier 2 and tier 3 cities."
+          ],
+          "imageQuery": "digital technology growth",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8Mnx8ZGlnaXRhbCUyMHRlY2hub2xvZ3klMjBncm93dGh8ZW58MHwwfHx8MTc5MjEzMjg1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "EUsVwEOsblE",
+          "photographer": "Adi Goldstein",
+          "photographerUrl": "https://unsplash.com/@adigold1"
+        },
+        "hasImage": true,
+        "imageQuery": "digital technology growth",
+        "photoId": "EUsVwEOsblE",
+        "photographer": "Adi Goldstein",
+        "bulletCount": 4
+      },
+      {
+        "idx": 13,
+        "layout": "quote",
+        "title": "Embracing Challenges, Seizing Opportunities",
+        "content": {
+          "quote": "In every challenge lies an opportunity for growth, especially in India's evolving market.",
+          "attribution": "Market Analyst Insights",
+          "imageQuery": "vibrant Indian marketplace",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1769634306787-7f2fff1cca7d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8dmlicmFudCUyMGluZGlhbiUyMG1hcmtldHBsYWNlfGVufDB8MHx8fDE3OTIxMzI4NTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "OZnYSO-HHJs",
+          "photographer": "Harshit Katiyar",
+          "photographerUrl": "https://unsplash.com/@harshitkatiyar"
+        },
+        "hasImage": true,
+        "imageQuery": "vibrant Indian marketplace",
+        "photoId": "OZnYSO-HHJs",
+        "photographer": "Harshit Katiyar"
+      },
+      {
+        "idx": 14,
+        "layout": "closing",
+        "title": "Embrace the Future of India's Market",
+        "content": {
+          "headline": "Embrace the Future of India's Market",
+          "imageQuery": "Indian digital economy growth",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1565371767810-ef913a6c8315?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8aW5kaWFuJTIwZGlnaXRhbCUyMGVjb25vbXklMjBncm93dGh8ZW58MHwwfHx8MTc5MjEzMjg1NHww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "5lw6CLBZlCg",
+          "photographer": "rupixen",
+          "photographerUrl": "https://unsplash.com/@rupixen"
+        },
+        "hasImage": true,
+        "imageQuery": "Indian digital economy growth",
+        "photoId": "5lw6CLBZlCg",
+        "photographer": "rupixen"
+      }
+    ]
+  },
+  {
+    "fixture": "20-page-hindi.txt",
+    "label": "Corporate Financial Analysis (Hindi)",
+    "theme": "creative",
+    "chars": 23989,
+    "generationTimeMs": 78862,
+    "slideCount": 20,
+    "scalingTarget": 20,
+    "layoutDistribution": {
+      "title": 1,
+      "two_column": 2,
+      "stats": 2,
+      "bullets": 8,
+      "image": 1,
+      "process": 2,
+      "chart": 2,
+      "quote": 1,
+      "closing": 1
+    },
+    "bulletPct": 40,
+    "statsOrChartCount": 4,
+    "hasStatsOrChart": true,
+    "validPlan": true,
+    "planViolations": [],
+    "totalImages": 12,
+    "uniqueImages": 12,
+    "duplicatePhotos": 0,
+    "fallbackSlides": 0,
+    "pptxPath": "e:\\projects\\Slidequill\\slidequill\\exports\\rerun\\20-page-hindi.pptx",
+    "slides": [
+      {
+        "idx": 1,
+        "layout": "title",
+        "title": "सशक्त वित्तीय वृद्धि की कहानी",
+        "content": {
+          "subtitle": "संस्थान का शुद्ध राजस्व ₹21.9 करोड़, 17.0% वार्षिक वृद्धि",
+          "imageQuery": "financial growth chart",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1591696205602-2f950c417cb9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwY2hhcnR8ZW58MHwwfHx8MTc5MjEzMjgwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "IrRbSND5EUc",
+          "photographer": "Markus Winkler",
+          "photographerUrl": "https://unsplash.com/@markuswinkler"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth chart",
+        "photoId": "IrRbSND5EUc",
+        "photographer": "Markus Winkler"
+      },
+      {
+        "idx": 2,
+        "layout": "two_column",
+        "title": "वित्तीय विवरण और राजस्व का विश्लेषण",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 3,
+        "layout": "stats",
+        "title": "डिजिटल परिवर्तन से वित्तीय वृद्धि",
+        "content": {
+          "stats": [
+            {
+              "value": "₹28.7Cr",
+              "label": "शुद्ध राजस्व"
+            },
+            {
+              "value": "19.0%",
+              "label": "वार्षिक वृद्धि"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 4,
+        "layout": "bullets",
+        "title": "ग्राहक अधिग्रहण में अभूतपूर्व वृद्धि",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व ₹32.1 करोड़",
+            "20.0% वार्षिक वृद्धि",
+            "सकल लाभ मार्जिन 69.0%",
+            "सकारात्मक परिचालन नकदी प्रवाह ₹18.0 करोड़"
+          ],
+          "imageQuery": "financial growth chart",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1543286386-2e659306cd6c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8Mnx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwY2hhcnR8ZW58MHwwfHx8MTc5MjEzMjgwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "AT77Q0Njnt0",
+          "photographer": "Isaac Smith",
+          "photographerUrl": "https://unsplash.com/@isaacmsmith"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth chart",
+        "photoId": "AT77Q0Njnt0",
+        "photographer": "Isaac Smith",
+        "bulletCount": 4
+      },
+      {
+        "idx": 5,
+        "layout": "image",
+        "title": "मानव संसाधन में प्रगति के नए आयाम",
+        "content": {
+          "variant": "split",
+          "imageUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80",
+          "imageKeyword": "human resource development",
+          "imageQuery": "human resource development",
+          "imagePlacement": "background",
+          "photographer": "Sean Pollock",
+          "photographerUrl": "https://unsplash.com/@seanpollock",
+          "photoId": "curated-business-sean-pollock"
+        },
+        "hasImage": true,
+        "imageQuery": "human resource development",
+        "photoId": "curated-business-sean-pollock",
+        "photographer": "Sean Pollock"
+      },
+      {
+        "idx": 6,
+        "layout": "bullets",
+        "title": "नियामक अनुपालन में उत्कृष्टता का प्रदर्शन",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व ₹38.9 करोड़",
+            "16.0% वार्षिक वृद्धि",
+            "सकल लाभ मार्जिन 71.0%",
+            "सकारात्मक नकदी प्रवाह ₹21.0 करोड़"
+          ],
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8M3x8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "fiXLQXAhCfk",
+          "photographer": "Maxim Hopman",
+          "photographerUrl": "https://unsplash.com/@nampoh"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "fiXLQXAhCfk",
+        "photographer": "Maxim Hopman",
+        "bulletCount": 4
+      },
+      {
+        "idx": 7,
+        "layout": "process",
+        "title": "सतत विकास की दिशा में कदम",
+        "content": {
+          "steps": [
+            {
+              "label": "राजस्व वृद्धि",
+              "desc": "Description"
+            },
+            {
+              "label": "सामाजिक उत्तरदायित्व",
+              "desc": "Description"
+            },
+            {
+              "label": "प्रौद्योगिकी का उपयोग",
+              "desc": "Description"
+            },
+            {
+              "label": "लक्ष्य निर्धारण",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 8,
+        "layout": "bullets",
+        "title": "साझेदारी से राजस्व में वृद्धि",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व: ₹45.7 करोड़",
+            "वार्षिक वृद्धि: 18.0%",
+            "सकल लाभ मार्जिन: 73.0%",
+            "सकारात्मक नकदी प्रवाह: ₹24.0 करोड़"
+          ],
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1560221328-12fe60f83ab8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8NHx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "Wb63zqJ5gnE",
+          "photographer": "Nicholas Cappello",
+          "photographerUrl": "https://unsplash.com/@bash__profile"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "Wb63zqJ5gnE",
+        "photographer": "Nicholas Cappello",
+        "bulletCount": 4
+      },
+      {
+        "idx": 9,
+        "layout": "chart",
+        "title": "2026 वित्तीय प्रदर्शन का विश्लेषण",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "शुद्ध राजस्व",
+            "वार्षिक वृद्धि"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 10,
+        "layout": "two_column",
+        "title": "वित्तीय विवरण एवं राजस्व विश्लेषण",
+        "content": {
+          "left": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          "right": {
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 11,
+        "layout": "bullets",
+        "title": "डिजिटल परिवर्तन से वित्तीय वृद्धि",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व: ₹55.9 करोड़",
+            "वार्षिक वृद्धि: 21.0%",
+            "सकल लाभ मार्जिन: 67.0%",
+            "सकारात्मक नकदी प्रवाह: ₹28.5 करोड़"
+          ],
+          "imageQuery": "digital transformation technology",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
+          "photoId": "curated-tech-alexandre-debieve",
+          "photographer": "Alexandre Debiève",
+          "photographerUrl": "https://unsplash.com/@alexandre_debieve"
+        },
+        "hasImage": true,
+        "imageQuery": "digital transformation technology",
+        "photoId": "curated-tech-alexandre-debieve",
+        "photographer": "Alexandre Debiève",
+        "bulletCount": 4
+      },
+      {
+        "idx": 12,
+        "layout": "quote",
+        "title": "ग्राहक अधिग्रहण में सफलता की कहानी",
+        "content": {
+          "quote": "इस वित्तीय वर्ष में, हमने ग्राहक अधिग्रहण में 16% की वृद्धि दर्ज की।",
+          "attribution": "कॉर्पोरेट वित्तीय टीम",
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1592495989226-03f88104f8cc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8NXx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "PcDGGex9-jA",
+          "photographer": "Morgan Housel",
+          "photographerUrl": "https://unsplash.com/@morganhousel"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "PcDGGex9-jA",
+        "photographer": "Morgan Housel"
+      },
+      {
+        "idx": 13,
+        "layout": "bullets",
+        "title": "उच्चतम शुद्ध राजस्व और वृद्धि दर",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व: ₹62.7 करोड़",
+            "वार्षिक वृद्धि: 17.0%",
+            "सकल लाभ मार्जिन: 69.0%",
+            "सकारात्मक नकदी प्रवाह: ₹31.5 करोड़"
+          ],
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1634117622592-114e3024ff27?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8Nnx8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "vVHXeu0YNbk",
+          "photographer": "Алекс Арцибашев",
+          "photographerUrl": "https://unsplash.com/@lxrcbsv"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "vVHXeu0YNbk",
+        "photographer": "Алекс Арцибашев",
+        "bulletCount": 4
+      },
+      {
+        "idx": 14,
+        "layout": "stats",
+        "title": "नियामक अनुपालन में उत्कृष्टता के संकेत",
+        "content": {
+          "stats": [
+            {
+              "value": "₹66.1Cr",
+              "label": "शुद्ध राजस्व"
+            },
+            {
+              "value": "18.0%",
+              "label": "वार्षिक वृद्धि"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 15,
+        "layout": "bullets",
+        "title": "सतत विकास में वित्तीय सफलता",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व ₹69.5 करोड़",
+            "19.0% वार्षिक वृद्धि",
+            "सकल लाभ मार्जिन 71.0%",
+            "सकारात्मक परिचालन नकदी प्रवाह ₹34.5 करोड़"
+          ],
+          "imageQuery": "financial growth graph",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1689732888407-310424e3a372?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8N3x8ZmluYW5jaWFsJTIwZ3Jvd3RoJTIwZ3JhcGh8ZW58MHwwfHx8MTc5MjEzMjc0Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+          "photoId": "VLpWpv3oDB4",
+          "photographer": "Austin Hervias",
+          "photographerUrl": "https://unsplash.com/@ahervias77"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth graph",
+        "photoId": "VLpWpv3oDB4",
+        "photographer": "Austin Hervias",
+        "bulletCount": 4
+      },
+      {
+        "idx": 16,
+        "layout": "process",
+        "title": "रणनीतिक साझेदारी के चरण",
+        "content": {
+          "steps": [
+            {
+              "label": "बाजार विश्लेषण",
+              "desc": "Description"
+            },
+            {
+              "label": "साझेदारी निर्माण",
+              "desc": "Description"
+            },
+            {
+              "label": "प्रक्रियाओं का स्वचालन",
+              "desc": "Description"
+            },
+            {
+              "label": "विस्तार योजना",
+              "desc": "Description"
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 17,
+        "layout": "bullets",
+        "title": "सफलता की कहानी: वित्तीय प्रदर्शन",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व ₹76.3 करोड़ का है।",
+            "21.0% वार्षिक वृद्धि दर्शाता है।",
+            "सकल लाभ मार्जिन 73.0% पर स्थिर।",
+            "सकारात्मक नकदी प्रवाह ₹37.5 करोड़।"
+          ],
+          "imageQuery": "financial growth illustration",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80",
+          "photoId": "curated-teamwork-annie-spratt",
+          "photographer": "Annie Spratt",
+          "photographerUrl": "https://unsplash.com/@anniespratt"
+        },
+        "hasImage": true,
+        "imageQuery": "financial growth illustration",
+        "photoId": "curated-teamwork-annie-spratt",
+        "photographer": "Annie Spratt",
+        "bulletCount": 4
+      },
+      {
+        "idx": 18,
+        "layout": "chart",
+        "title": "वित्तीय प्रदर्शन का सारांश",
+        "content": {
+          "chartType": "bar",
+          "categories": [
+            "शुद्ध राजस्व",
+            "वार्षिक वृद्धि"
+          ],
+          "series": [
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            },
+            {
+              "name": "Metric",
+              "values": [
+                10,
+                10
+              ]
+            }
+          ]
+        },
+        "hasImage": false
+      },
+      {
+        "idx": 19,
+        "layout": "bullets",
+        "title": "डिजिटल परिवर्तन में वित्तीय वृद्धि",
+        "content": {
+          "bullets": [
+            "शुद्ध राजस्व ₹83.1 करोड़",
+            "17.0% वार्षिक वृद्धि",
+            "सकल लाभ मार्जिन 66.0%",
+            "99.98% सिस्टम अपटाइम"
+          ],
+          "imageQuery": "digital infrastructure technology",
+          "imagePlacement": "right",
+          "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=80",
+          "photoId": "curated-data-luke-chesser",
+          "photographer": "Luke Chesser",
+          "photographerUrl": "https://unsplash.com/@lukechesser"
+        },
+        "hasImage": true,
+        "imageQuery": "digital infrastructure technology",
+        "photoId": "curated-data-luke-chesser",
+        "photographer": "Luke Chesser",
+        "bulletCount": 4
+      },
+      {
+        "idx": 20,
+        "layout": "closing",
+        "title": "ग्राहक अधिग्रहण में नई ऊँचाइयाँ हासिल करें",
+        "content": {
+          "headline": "ग्राहक अधिग्रहण में नई ऊँचाइयाँ हासिल करें",
+          "imageQuery": "growth chart",
+          "imagePlacement": "background",
+          "imageUrl": "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80",
+          "photoId": "curated-creative-alesia-kazantceva",
+          "photographer": "Alesia Kazantceva",
+          "photographerUrl": "https://unsplash.com/@alekazan"
+        },
+        "hasImage": true,
+        "imageQuery": "growth chart",
+        "photoId": "curated-creative-alesia-kazantceva",
+        "photographer": "Alesia Kazantceva"
+      }
+    ]
+  }
+]

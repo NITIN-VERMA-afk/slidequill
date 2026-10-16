@@ -49,6 +49,10 @@ export default function SlideRenderer({
   }
 
   const isFullBleedImage = slide.layout === "image" && slide.content.variant === "full_bleed";
+  const hasTitleBgImage = slide.layout === "title" && Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "background" || (!slide.content.imagePlacement && t.titleSlideStyle !== "split")));
+  const isQuoteWithBgImage = slide.layout === "quote" && Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "background" || !slide.content.imagePlacement));
+  const hasClosingBgImage = slide.layout === "closing" && Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "background" || !slide.content.imagePlacement));
+  const isAnyFullBleedImage = hasTitleBgImage || isFullBleedImage || isQuoteWithBgImage || hasClosingBgImage;
 
   return (
     <div
@@ -60,18 +64,18 @@ export default function SlideRenderer({
     >
       {/* Title Layout */}
       {slide.layout === "title" && (() => {
-        const hasBgImage = Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "background" || (!slide.content.imagePlacement && t.titleSlideStyle !== "split")));
+        const hasBgImage = hasTitleBgImage;
         const hasRightImage = Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "right" || t.titleSlideStyle === "split"));
 
         if (hasBgImage) {
           return (
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[#0a0f1d]">
               <img
                 src={slide.content.imageUrl}
                 alt={slide.content.imageQuery || slide.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/35 flex flex-col justify-center px-[10cqw]">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/65 to-black/45 flex flex-col justify-center px-[10cqw]">
                 <h1 className="text-[6.5cqw] font-extrabold leading-tight mb-[2.5cqw] text-white">
                   {slide.title}
                 </h1>
@@ -79,7 +83,7 @@ export default function SlideRenderer({
                   <p className="text-[3.2cqw] text-white/85 max-w-3xl">{slide.content.subtitle}</p>
                 )}
                 {slide.content.photographer && (
-                  <div className="absolute bottom-2 right-3 text-white/50 text-[1.2cqw]">
+                  <div className="absolute bottom-2 right-3 text-white/60 text-[1.1cqw]">
                     Photo: {slide.content.photographer}
                   </div>
                 )}
@@ -133,8 +137,8 @@ export default function SlideRenderer({
         );
       })()}
 
-      {/* Standard Layouts Header (except title, closing, and full-bleed image) */}
-      {slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage && (
+      {/* Standard Layouts Header (except title, closing, and full-bleed images) */}
+      {slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage && !isQuoteWithBgImage && (
         <div className="absolute top-[4cqw] left-[5cqw] right-[5cqw] h-[10cqw]">
           <h2 className="text-[4cqw] font-bold leading-tight" style={styleHeading}>
             {slide.title}
@@ -144,39 +148,39 @@ export default function SlideRenderer({
       )}
 
       {/* Standard Layouts Content Area */}
-      {slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage && (
+      {slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage && !isQuoteWithBgImage && (
         <div className="absolute top-[18cqw] bottom-[4cqw] left-[5cqw] right-[5cqw] flex flex-col overflow-hidden">
           
           {slide.layout === "bullets" && (
             slide.content.imageUrl ? (
               <div className="flex-1 flex gap-[4cqw] items-center">
-                <div className="w-[58%]">
-                  <ul className="list-none space-y-[2cqw] text-[2.8cqw]">
-                    {slide.content.bullets?.map((b: string, i: number) => {
+                <div className="w-[62%]">
+                  <ul className="list-none space-y-[2cqw] text-[3cqw]">
+                    {(slide.content.bullets || []).slice(0, 4).map((b: string, i: number) => {
                       const iconName = slide.content.icons?.[i];
                       return (
                         <li key={i} className="flex gap-[1.5cqw] items-start">
                           {iconName ? (
-                            <span className="mt-[0.5cqw] shrink-0 text-[2.6cqw]" style={{ color: t.colors.accent }}>
+                            <span className="mt-[0.5cqw] shrink-0 text-[2.8cqw]" style={{ color: t.colors.accent }}>
                               <SlideIcon name={iconName} size="1.2em" />
                             </span>
                           ) : (
                             <span className="mt-[1cqw] w-[0.8cqw] h-[0.8cqw] shrink-0" style={{ backgroundColor: t.colors.accent, ...roundedStyle }} />
                           )}
-                          <span>{b}</span>
+                          <span className="leading-snug">{b}</span>
                         </li>
                       );
                     })}
                   </ul>
                 </div>
-                <div className="w-[42%] h-full relative rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: t.colors.surface }}>
+                <div className="w-[38%] h-full relative rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: t.colors.surface }}>
                   <img
                     src={slide.content.imageUrl}
                     alt={slide.content.imageQuery || "Slide photo"}
                     className="w-full h-full object-cover"
                   />
                   {slide.content.photographer && (
-                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[1cqw] px-1.5 py-0.5 rounded">
+                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[1cqw] px-1.5 py-0.5 rounded truncate max-w-[90%]">
                       Photo: {slide.content.photographer}
                     </div>
                   )}
@@ -450,14 +454,43 @@ export default function SlideRenderer({
         </div>
       )}
 
+      {/* Quote Layout (Full Background Image variant) */}
+      {isQuoteWithBgImage && (
+        <div className="absolute inset-0 bg-[#0a0f1d]">
+          {slide.content.imageUrl && (
+            <img
+              src={slide.content.imageUrl}
+              alt={slide.content.attribution || "Quote background"}
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center text-center px-[10cqw]">
+            <div className="text-[10cqw] leading-none h-[6cqw] text-white/30" style={{ fontFamily: styleHeading.fontFamily }}>&quot;</div>
+            <p className="text-[4.2cqw] font-medium italic mb-[3cqw] leading-relaxed text-white max-w-4xl">
+              {slide.content.quote}
+            </p>
+            {slide.content.attribution && (
+              <p className="text-[2.4cqw] font-bold uppercase tracking-widest text-white/80">
+                — {slide.content.attribution}
+              </p>
+            )}
+            {slide.content.photographer && (
+              <div className="absolute bottom-2 right-3 text-white/60 text-[1.1cqw]">
+                Photo: {slide.content.photographer}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Closing Layout */}
       {slide.layout === "closing" && (() => {
-        const hasBgImage = Boolean(slide.content.imageUrl && (slide.content.imagePlacement === "background" || !slide.content.imagePlacement));
+        const hasBgImage = hasClosingBgImage;
         const hasRightImage = Boolean(slide.content.imageUrl && slide.content.imagePlacement === "right");
 
         if (hasBgImage) {
           return (
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[#0a0f1d]">
               <img
                 src={slide.content.imageUrl}
                 alt={slide.content.headline || "Closing"}
@@ -527,18 +560,19 @@ export default function SlideRenderer({
         );
       })()}
 
-      {/* Grounded Source or Fallback Indicator */}
+      {/* Grounded Source or Fallback Indicator (Bottom-Left to avoid colliding with Photo Credit) */}
       {(slide.sourceSection || slide.sourcePage || slide.meta?.fallback) && (
         <div
-          className="absolute bottom-[1.5cqw] right-[2.5cqw] flex items-center gap-[1cqw] text-[1.4cqw] px-[1.2cqw] py-[0.4cqw] rounded-full pointer-events-none opacity-70"
+          className="absolute bottom-[1.5cqw] left-[2.5cqw] flex items-center gap-[0.8cqw] text-[1.2cqw] px-[1.2cqw] py-[0.4cqw] rounded-full pointer-events-none opacity-85 backdrop-blur-sm z-20"
           style={{
-            backgroundColor: t.colors.surface,
-            color: t.colors.mutedText,
+            backgroundColor: isAnyFullBleedImage ? "rgba(0,0,0,0.65)" : t.colors.surface,
+            color: isAnyFullBleedImage ? "#ffffff" : t.colors.mutedText,
+            border: isAnyFullBleedImage ? "1px solid rgba(255,255,255,0.15)" : undefined,
           }}
         >
-          {slide.meta?.fallback && <span className="font-semibold text-amber-500">Auto-generated</span>}
+          {slide.meta?.fallback && <span className="font-semibold text-amber-400">Auto-generated</span>}
           {slide.sourceSection && (
-            <span className="truncate max-w-[20cqw]">Source: {slide.sourceSection}</span>
+            <span className="truncate max-w-[22cqw]">Source: {slide.sourceSection}</span>
           )}
           {slide.sourcePage && <span>p.{slide.sourcePage}</span>}
         </div>

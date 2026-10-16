@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function ResetPasswordPage() {
     });
 
     if (res.ok) {
-      alert("Password reset successful. Please log in.");
+      toast.success("Password reset successful. Please log in.");
       router.push("/login");
     } else {
       const data = await res.json();

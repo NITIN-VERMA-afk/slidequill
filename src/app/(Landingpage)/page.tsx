@@ -38,7 +38,7 @@ const plans = [
     name: "50 Credits",
     price: "₹399",
     note: "50 decks, best value",
-    items: ["Best value pricing", "Everything in 20 Credits", "Priority support", "No watermark", "All 6 professional templates"],
+    items: ["Best value pricing", "Everything in 20 Credits", "Priority email support (24h SLA)", "No watermark", "All 6 professional templates"],
     cta: "Buy 50 credits — ₹399",
     ctaHref: "/signup",
     hl: false,
@@ -51,6 +51,7 @@ const faqs = [
   ["What can I upload?", "PDF, DOCX and plain text. YouTube and web links are planned."],
   ["How many credits does one deck use?", "One credit per deck. A failed generation refunds the credit automatically."],
   ["Can I regenerate individual slides?", "Yes. If one slide isn't right, you can regenerate just that slide without redoing the whole deck."],
+  ["What is priority email support?", "50-credit pack customers receive direct priority email assistance (via support@slidequill.in) with a guaranteed response SLA within 24 hours."],
   ["Do credits expire?", "No. Credits never expire — use them whenever you need them."],
   ["Do you store my uploaded documents?", "Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your source text immediately from the deck editor at any time. We never use your content to train models."],
 ];

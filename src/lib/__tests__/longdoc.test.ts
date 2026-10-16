@@ -7,6 +7,7 @@ import {
   fitsSingleCallBudget,
   splitDocumentIntoChunks,
   getSourceExcerptForSection,
+  calculateTargetSectionCount,
   MAX_SOURCE_CHARS,
   SINGLE_CALL_TOKEN_THRESHOLD,
 } from "../longdoc";
@@ -115,5 +116,41 @@ describe("Long Document Pipeline Core (src/lib/longdoc.ts)", () => {
     assert.ok(excerpt.includes("[Page 1]"));
     assert.ok(excerpt.includes("[Page 2]"));
     assert.ok(!excerpt.includes("[Page 3]"));
+  });
+
+  it("scales outline section counts dynamically based on document length and pages", () => {
+    // 1-page memo (< 8k chars) -> 6 slides
+    const shortDoc = calculateTargetSectionCount(2500, 1);
+    assert.equal(shortDoc.targetSections, 6);
+    assert.equal(shortDoc.minSections, 5);
+    assert.equal(shortDoc.maxSections, 7);
+
+    // Medium doc (15k chars / 6 pages) -> 10 slides
+    const medDoc = calculateTargetSectionCount(15000, 6);
+    assert.equal(medDoc.targetSections, 10);
+    assert.equal(medDoc.minSections, 8);
+    assert.equal(medDoc.maxSections, 12);
+
+    // Long doc (35k chars / 14 pages) -> 14 slides
+    const longDoc = calculateTargetSectionCount(35000, 14);
+    assert.equal(longDoc.targetSections, 14);
+    assert.equal(longDoc.minSections, 12);
+    assert.equal(longDoc.maxSections, 16);
+
+    // Very long 30-page doc (> 50k chars / 30 pages) -> 18 slides
+    const veryLongDoc = calculateTargetSectionCount(75000, 30);
+    assert.equal(veryLongDoc.targetSections, 18);
+    assert.equal(veryLongDoc.minSections, 15);
+    assert.equal(veryLongDoc.maxSections, 20);
+
+    // User explicit target slide count overrides (6, 10, 15, 20)
+    const userPref6 = calculateTargetSectionCount(75000, 30, 6);
+    assert.equal(userPref6.targetSections, 6);
+
+    const userPref15 = calculateTargetSectionCount(2500, 1, 15);
+    assert.equal(userPref15.targetSections, 15);
+
+    const userPref20 = calculateTargetSectionCount(5000, 2, 20);
+    assert.equal(userPref20.targetSections, 20);
   });
 });

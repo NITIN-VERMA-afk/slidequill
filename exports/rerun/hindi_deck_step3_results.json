@@ -1,0 +1,593 @@
+{
+  "durationSec": 62,
+  "slides": [
+    {
+      "title": "Transforming Operational Efficiency and Revenue Growth",
+      "notes": "This slide highlights the key achievements and future focus areas for the organization in 2026.",
+      "layout": "title",
+      "content": {
+        "subtitle": "A Strategic Overview of Financial Performance",
+        "imageQuery": "corporate financial analysis report",
+        "imagePlacement": "background",
+        "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8Y29ycG9yYXRlJTIwZmluYW5jaWFsJTIwYW5hbHlzaXMlMjByZXBvcnR8ZW58MHwwfHx8MTc5MjEzNDk3Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+        "photoId": "JKUTrJ4vK00",
+        "photographer": "Luke Chesser",
+        "photographerUrl": "https://unsplash.com/@lukechesser"
+      },
+      "id": "907bbc23-0160-4ece-bc76-180995299f00",
+      "sourceSection": "कार्यकारी सारांश"
+    },
+    {
+      "title": "Strategic Progress and Revenue Growth",
+      "notes": "This slide highlights key advancements and financial metrics for the institution.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Significant progress in key operational areas.",
+          "Annual revenue growth of 17.0% recorded.",
+          "Gross profit margin stable at 66.0%.",
+          "Operational efficiency improved through regional collaboration."
+        ],
+        "imagePlacement": "none"
+      },
+      "id": "cc8d768f-82a0-4235-837c-ca73ace47ecd",
+      "sourceSection": "अनुभाग अवलोकन एवं रणनीतिक प्राथमिकताएं"
+    },
+    {
+      "title": "Key Financial Metrics for 2026",
+      "notes": "Highlighting the essential financial indicators for the upcoming year.",
+      "layout": "stats",
+      "content": {
+        "stats": [
+          {
+            "value": "₹73.4Cr",
+            "label": "Annual Recurring Revenue (ARR)"
+          },
+          {
+            "value": "117%",
+            "label": "Net Revenue Retention (NRR)"
+          },
+          {
+            "value": "₹15.0Cr",
+            "label": "Operational Cash Flow"
+          },
+          {
+            "value": "57,600",
+            "label": "Active Daily Business Users"
+          }
+        ]
+      },
+      "id": "7fdcb1c9-36ff-4aa5-8ff0-d7d4f6663806",
+      "sourceSection": "प्रमुख संख्यात्मक संकेतक"
+    },
+    {
+      "title": "Digital Transformation Drives Operational Efficiency",
+      "notes": "Highlight the key improvements in technology infrastructure and uptime standards.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Improved technology infrastructure for better performance.",
+          "Achieved 99.98% system uptime reliability standard.",
+          "Enhanced operational efficiency through strategic initiatives.",
+          "Significant revenue growth of 19% year-over-year."
+        ],
+        "imagePlacement": "none"
+      },
+      "id": "d273ae06-cb2c-40bd-9ba1-fb7f2d4e9674",
+      "sourceSection": "डिजिटल परिवर्तन"
+    },
+    {
+      "title": "ग्राहक अधिग्रहण में वृद्धि के प्रमुख पहलू",
+      "notes": "This slide outlines the key aspects of customer acquisition growth, highlighting market share and daily active users.",
+      "layout": "two_column",
+      "content": {
+        "left": {
+          "bullets": [
+            "Point 1",
+            "Point 2"
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Point 1",
+            "Point 2"
+          ]
+        }
+      },
+      "id": "bb69a7e6-e443-47e0-ab4d-9bcbcbbecc14",
+      "sourceSection": "ग्राहक अधिग्रहण"
+    },
+    {
+      "title": "Key Focus Areas in Human Resource Development",
+      "notes": "This slide highlights the essential aspects of human resource development within the organization, focusing on employee growth programs and organizational structure.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Employee development programs enhance workforce skills.",
+          "Organizational structure supports operational efficiency.",
+          "Key point 3"
+        ]
+      },
+      "id": "6f3cc3cd-0818-4bdf-9e85-8a067deb8cd6",
+      "sourceSection": "मानव संसाधन विकास"
+    },
+    {
+      "title": "नियामक अनुपालन",
+      "notes": "Discussion notes for नियामक अनुपालन.",
+      "meta": {
+        "fallback": true
+      },
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "जोखिम प्रबंधन रणनीतियाँ",
+          "डेटा सुरक्षा ऑडिट",
+          "Key point 3"
+        ]
+      },
+      "id": "91f2705a-54a9-4d79-a03c-7b1d5d439bed",
+      "sourceSection": "नियामक अनुपालन"
+    },
+    {
+      "title": "Sustainable Development Drives Corporate Success",
+      "notes": "Highlighting the importance of CSR and sustainable goals in corporate strategy.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Corporate Social Responsibility initiatives enhance community trust.",
+          "Achieving sustainable development goals boosts brand reputation.",
+          "Operational efficiency improvements support financial growth.",
+          "Investment in green technologies drives long-term sustainability."
+        ]
+      },
+      "id": "26a37352-6c76-4b1f-81d4-0211e96096f7",
+      "sourceSection": "सतत विकास"
+    },
+    {
+      "title": "वैश्विक विस्तार",
+      "notes": "Discussion notes for वैश्विक विस्तार.",
+      "meta": {
+        "fallback": true
+      },
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "नई रणनीतिक साझेदारियाँ",
+          "अंतरराष्ट्रीय बाजारों में प्रवेश",
+          "Key point 3"
+        ]
+      },
+      "id": "96fd7b56-f222-4845-8330-f9ae9260d961",
+      "sourceSection": "वैश्विक विस्तार"
+    },
+    {
+      "title": "वित्तीय विवरण: प्रमुख संकेतक और प्रगति",
+      "notes": "इस स्लाइड में वित्तीय विवरण के मुख्य बिंदुओं को संक्षेप में प्रस्तुत किया गया है।",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "राजस्व में 20% की वार्षिक वृद्धि दर्ज की गई।",
+          "सकल लाभ मार्जिन 66% पर स्थिर रहा है।",
+          "सक्रिय दैनिक उपयोगकर्ता 80,000 तक पहुंचे।",
+          "परिचालन नकदी प्रवाह ₹27 करोड़ सकारात्मक है।"
+        ],
+        "imagePlacement": "none"
+      },
+      "id": "4bc214db-02f9-46e6-8fce-89d664539398",
+      "sourceSection": "वित्तीय विवरण"
+    },
+    {
+      "title": "Transforming Operations for Future Success",
+      "notes": "We are focusing on automation and cloud enhancements to drive efficiency.",
+      "layout": "process",
+      "content": {
+        "steps": [
+          {
+            "label": "Automate Processes",
+            "desc": "Description"
+          },
+          {
+            "label": "Enhance Cloud Architecture",
+            "desc": "Description"
+          },
+          {
+            "label": "Expand Local Distribution",
+            "desc": "Description"
+          },
+          {
+            "label": "Conduct Data Security Audits",
+            "desc": "Description"
+          }
+        ]
+      },
+      "id": "e38a9799-b63e-476e-addc-28244c171caa",
+      "sourceSection": "आगामी लक्ष्य"
+    },
+    {
+      "title": "सामाजिक उत्तरदायित्व में हमारी प्रतिबद्धता",
+      "notes": "इस स्लाइड में हम सामाजिक उत्तरदायित्व के तहत हमारे योगदान और परियोजनाओं का विवरण प्रस्तुत कर रहे हैं।",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "स्थानीय समुदायों में विकास हेतु योगदान",
+          "सामाजिक परियोजनाओं का विस्तृत विवरण",
+          "स्थायी विकास के लिए सहयोगी पहल",
+          "समाज के कमजोर वर्गों के लिए समर्थन"
+        ]
+      },
+      "id": "bf91df8d-266d-465e-98c1-fc34978147b1",
+      "sourceSection": "सामाजिक उत्तरदायित्व"
+    },
+    {
+      "title": "वित्तीय प्रदर्शन",
+      "notes": "Discussion notes for वित्तीय प्रदर्शन.",
+      "meta": {
+        "fallback": true
+      },
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "नकदी प्रवाह का विश्लेषण",
+          "वित्तीय स्वास्थ्य की स्थिति",
+          "Key point 3"
+        ]
+      },
+      "id": "7c30144d-515f-47cd-a10f-47de89943ce8",
+      "sourceSection": "वित्तीय प्रदर्शन"
+    },
+    {
+      "title": "Enhancing Technical Infrastructure Reliability",
+      "notes": "This slide emphasizes the key aspects of our technical infrastructure improvements, focusing on uptime and advancements.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Achieved 99.98% system uptime standard.",
+          "Continuous improvements in technical reliability.",
+          "Automation of processes for operational efficiency.",
+          "Strengthening cloud architecture for better performance."
+        ]
+      },
+      "id": "2b501652-7e0b-43fb-a67a-b71b312519bc",
+      "sourceSection": "तकनीकी अवसंरचना"
+    },
+    {
+      "title": "संस्थान की रणनीतियाँ",
+      "notes": "This slide outlines the strategic approaches of the organization focusing on growth and competitive advantage.",
+      "layout": "two_column",
+      "content": {
+        "left": {
+          "bullets": [
+            "Point 1",
+            "Point 2"
+          ]
+        },
+        "right": {
+          "bullets": [
+            "Point 1",
+            "Point 2"
+          ]
+        }
+      },
+      "id": "f0526fad-6ab1-47ae-912d-14ff86d82ccb",
+      "sourceSection": "संस्थान की रणनीतियाँ"
+    },
+    {
+      "title": "Financial Stability: Key Indicators and Insights",
+      "notes": "This slide highlights the essential points regarding financial stability and performance metrics.",
+      "layout": "bullets",
+      "content": {
+        "bullets": [
+          "Profit margin evaluation shows robust cost management.",
+          "Annual revenue growth of 21.0% indicates strong performance.",
+          "Net revenue retention stands at 122.0% for corporate accounts.",
+          "Operational cash flow remains positive at ₹37.5 crore."
+        ],
+        "imagePlacement": "none"
+      },
+      "id": "557754ed-c93d-4df9-9077-b28c0d899532",
+      "sourceSection": "वित्तीय स्थिरता"
+    },
+    {
+      "title": "Strengthening Internal Controls for Success",
+      "notes": "This process outlines the key steps to enhance internal controls and risk management.",
+      "layout": "process",
+      "content": {
+        "steps": [
+          {
+            "label": "Identify Risks",
+            "desc": "Description"
+          },
+          {
+            "label": "Implement Controls",
+            "desc": "Description"
+          },
+          {
+            "label": "Conduct Audits",
+            "desc": "Description"
+          },
+          {
+            "label": "Continuous Improvement",
+            "desc": "Description"
+          }
+        ]
+      },
+      "id": "1581bc53-f96a-4e29-8473-c330b2d56a5f",
+      "sourceSection": "आंतरिक नियंत्रण"
+    },
+    {
+      "title": "प्रतिस्पर्धात्मक विश्लेषण: स्थिति और बाजार",
+      "notes": "इस स्लाइड में प्रतिस्पर्धियों की स्थिति और बाजार में स्थान की तुलना की गई है।",
+      "layout": "comparison",
+      "content": {
+        "columns": [
+          {
+            "heading": "प्रतिस्पर्धियों की स्थिति",
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          },
+          {
+            "heading": "बाजार में स्थान",
+            "bullets": [
+              "Point 1",
+              "Point 2"
+            ]
+          }
+        ]
+      },
+      "id": "5bdce558-67dc-4acb-8c0a-cad661f69016",
+      "sourceSection": "प्रतिस्पर्धात्मक विश्लेषण"
+    },
+    {
+      "title": "संस्थान का भविष्य: विकास की संभावनाएँ",
+      "notes": "This slide emphasizes the institution's commitment to growth and strategic planning for the future.",
+      "layout": "quote",
+      "content": {
+        "quote": "हमारी लंबी अवधि की योजनाएँ और विकास की संभावनाएँ हमें नई ऊँचाइयों तक पहुँचाएंगी।",
+        "attribution": "संस्थान के CEO",
+        "imageQuery": "strategic planning meeting",
+        "imagePlacement": "background",
+        "imageUrl": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wxMTAyNzY4fDB8MXxzZWFyY2h8MXx8c3RyYXRlZ2ljJTIwcGxhbm5pbmclMjBtZWV0aW5nfGVufDB8MHx8fDE3OTIxMzQ5NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+        "photoId": "KdeqA3aTnBY",
+        "photographer": "Dylan Gillis",
+        "photographerUrl": "https://unsplash.com/@mainermedia"
+      },
+      "id": "2ef10e15-82b7-421f-a7f3-1fa41df3270a",
+      "sourceSection": "संस्थान का भविष्य"
+    },
+    {
+      "title": "सफलता की दिशा में एक नई शुरुआत",
+      "notes": "This slide emphasizes the importance of strategic planning for future growth. Encourage the audience to embrace the outlined strategies.",
+      "layout": "closing",
+      "content": {
+        "headline": "सफलता की दिशा में एक नई शुरुआत",
+        "imagePlacement": "none"
+      },
+      "id": "90b946e1-8c6e-4e04-a843-9df8dbd8e16c",
+      "sourceSection": "निष्कर्ष"
+    }
+  ],
+  "report": [
+    {
+      "slideIdx": 1,
+      "title": "Transforming Operational Efficiency and Revenue Growth",
+      "layout": "title",
+      "hasImage": true,
+      "imageQuery": "corporate financial analysis report",
+      "queryStatus": "accepted",
+      "source": "unsplash",
+      "photographer": "Luke Chesser",
+      "photoId": "JKUTrJ4vK00"
+    },
+    {
+      "slideIdx": 2,
+      "title": "Strategic Progress and Revenue Growth",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "skipped_data_heavy_bullets",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 3,
+      "title": "Key Financial Metrics for 2026",
+      "layout": "stats",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 4,
+      "title": "Digital Transformation Drives Operational Efficiency",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "skipped_data_heavy_bullets",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 5,
+      "title": "ग्राहक अधिग्रहण में वृद्धि के प्रमुख पहलू",
+      "layout": "two_column",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 6,
+      "title": "Key Focus Areas in Human Resource Development",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 7,
+      "title": "नियामक अनुपालन",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 8,
+      "title": "Sustainable Development Drives Corporate Success",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 9,
+      "title": "वैश्विक विस्तार",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 10,
+      "title": "वित्तीय विवरण: प्रमुख संकेतक और प्रगति",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "skipped_data_heavy_bullets",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 11,
+      "title": "Transforming Operations for Future Success",
+      "layout": "process",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 12,
+      "title": "सामाजिक उत्तरदायित्व में हमारी प्रतिबद्धता",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 13,
+      "title": "वित्तीय प्रदर्शन",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 14,
+      "title": "Enhancing Technical Infrastructure Reliability",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 15,
+      "title": "संस्थान की रणनीतियाँ",
+      "layout": "two_column",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 16,
+      "title": "Financial Stability: Key Indicators and Insights",
+      "layout": "bullets",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "skipped_data_heavy_bullets",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 17,
+      "title": "Strengthening Internal Controls for Success",
+      "layout": "process",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 18,
+      "title": "प्रतिस्पर्धात्मक विश्लेषण: स्थिति और बाजार",
+      "layout": "comparison",
+      "hasImage": false,
+      "imageQuery": "N/A",
+      "queryStatus": "no_image_requested",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    },
+    {
+      "slideIdx": 19,
+      "title": "संस्थान का भविष्य: विकास की संभावनाएँ",
+      "layout": "quote",
+      "hasImage": true,
+      "imageQuery": "strategic planning meeting",
+      "queryStatus": "accepted",
+      "source": "unsplash",
+      "photographer": "Dylan Gillis",
+      "photoId": "KdeqA3aTnBY"
+    },
+    {
+      "slideIdx": 20,
+      "title": "सफलता की दिशा में एक नई शुरुआत",
+      "layout": "closing",
+      "hasImage": false,
+      "imageQuery": "strategic planning meeting",
+      "queryStatus": "rejected_duplicate_in_deck",
+      "source": "none",
+      "photographer": "None",
+      "photoId": "N/A"
+    }
+  ]
+}

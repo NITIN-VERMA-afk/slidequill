@@ -14,6 +14,7 @@ import { ChatResponseSchema, type Op } from "@/lib/ai-edit/ops";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { getDeckLimiter } from "@/lib/ratelimit";
 
+export const maxDuration = 60;
 const CHAT_MODEL = process.env.CHAT_MODEL ?? process.env.SLIDES_MODEL ?? "gpt-4o-mini";
 const CHAT_MESSAGES_PER_DECK = parseInt(process.env.CHAT_MESSAGES_PER_DECK ?? "30", 10);
 

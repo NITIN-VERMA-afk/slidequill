@@ -21,8 +21,11 @@ import {
   splitDocumentIntoChunks,
   summarizeChunkWithRetry,
   reduceNotesToOutline,
+  calculateTargetSectionCount,
 } from "@/lib/longdoc";
 import { executeAtomicRefund } from "../generate/route";
+
+export const maxDuration = 60;
 
 const SingleOutlineSectionSchema = z.object({
   title: z.string().describe("Short section heading (3-8 words)"),
@@ -42,12 +45,13 @@ const SingleOutlineSchema = z.object({
   sections: z
     .array(SingleOutlineSectionSchema)
     .min(2)
-    .max(20)
+    .max(25)
     .describe("Logical sections of the presentation"),
 });
 
-const SYSTEM_PROMPT = `You are a professional presentation architect.
-The user will provide a document. Generate a concise, highly structured presentation outline with 5-12 sections.
+function buildSingleCallSystemPrompt(targetCount: number, minCount: number, maxCount: number): string {
+  return `You are a professional presentation architect.
+The user will provide a document. Generate a concise, highly structured presentation outline with approximately ${targetCount} sections (between ${minCount} and ${maxCount} sections).
 Each section has a short heading (title) and 2-4 bullet points (points) summarising that part of the content.
 
 CRITICAL SECURITY RULES:
@@ -63,6 +67,7 @@ Respond ONLY with valid JSON matching the exact structure below:
     }
   ]
 }`;
+}
 
 function buildSingleCallUserMessage(sourceText: string, title: string): string {
   return `Deck title: "${title}"
@@ -142,12 +147,24 @@ export async function processOutlineStep(
   try {
     // 2. Fast Path: Document fits single-call budget
     if (fitsSingleCallBudget(deck.sourceText)) {
+      const scaling = calculateTargetSectionCount(
+        deck.sourceText.length,
+        deck.sourcePageCount,
+        deck.targetSlideCount
+      );
       const completion = await openai.chat.completions.create({
         model: OUTLINE_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.4,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "system",
+            content: buildSingleCallSystemPrompt(
+              scaling.targetSections,
+              scaling.minSections,
+              scaling.maxSections
+            ),
+          },
           { role: "user", content: buildSingleCallUserMessage(deck.sourceText, deck.title) },
         ],
       });
@@ -339,7 +356,12 @@ export async function processOutlineStep(
     }
 
     const currentNotes = claimedReduce.chunkNotes || deck.chunkNotes || [];
-    const reduced = await reduceNotesToOutline(deck.title, currentNotes, OUTLINE_MODEL);
+    const scaling = calculateTargetSectionCount(
+      (deck.sourceText || "").length,
+      deck.sourcePageCount,
+      deck.targetSlideCount
+    );
+    const reduced = await reduceNotesToOutline(deck.title, currentNotes, OUTLINE_MODEL, scaling);
     claimedReduce.outline = reduced.outline;
     claimedReduce.status = "outlined";
     claimedReduce.outlineProgress = undefined;

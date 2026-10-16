@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { themes, defaultThemeId } from "@/lib/themes";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Tab = "file" | "text";
 
@@ -26,6 +27,7 @@ function NewDeckForm() {
   const [file, setFile] = useState<File | null>(null);
   const [selectedTheme, setSelectedTheme] = useState(initialTheme);
   const [includeImages, setIncludeImages] = useState(true);
+  const [slideCount, setSlideCount] = useState<number>(10);
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState<
     "idle" | "uploading" | "redirecting"
@@ -81,6 +83,7 @@ function NewDeckForm() {
         if (title.trim()) form.append("title", title.trim());
         form.append("theme", selectedTheme);
         form.append("includeImages", String(includeImages));
+        form.append("targetSlideCount", String(slideCount));
         res = await fetch("/api/decks", { method: "POST", body: form });
       } else {
         res = await fetch("/api/decks", {
@@ -91,6 +94,7 @@ function NewDeckForm() {
             text,
             theme: selectedTheme,
             includeImages,
+            targetSlideCount: slideCount,
           }),
         });
       }
@@ -104,6 +108,7 @@ function NewDeckForm() {
             if (title.trim()) form.append("title", title.trim());
             form.append("theme", selectedTheme);
             form.append("includeImages", String(includeImages));
+            form.append("targetSlideCount", String(slideCount));
             res = await fetch("/api/decks", { method: "POST", body: form });
           } else {
             res = await fetch("/api/decks", {
@@ -114,6 +119,7 @@ function NewDeckForm() {
                 text,
                 theme: selectedTheme,
                 includeImages,
+                targetSlideCount: slideCount,
               }),
             });
           }
@@ -220,6 +226,48 @@ function NewDeckForm() {
             disabled={busy}
             className="h-5 w-5 rounded border-[#101A3A]/20 text-[#2F5BFF] focus:ring-[#2F5BFF] cursor-pointer"
           />
+        </div>
+
+        {/* Slide Count Selector */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-[#101A3A]">
+              Length of presentation
+            </label>
+            <span className="text-xs text-[#5a6384]">Choose target slide count</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { count: 6, label: "6 slides", desc: "Quick summary" },
+              { count: 10, label: "10 slides", desc: "Standard pitch (Default)" },
+              { count: 15, label: "15 slides", desc: "Detailed review" },
+              { count: 20, label: "20 slides", desc: "Comprehensive" },
+            ].map((opt) => (
+              <button
+                key={opt.count}
+                type="button"
+                disabled={busy}
+                onClick={() => setSlideCount(opt.count)}
+                className={clsx(
+                  "flex flex-col items-start p-3 rounded-xl border text-left transition",
+                  slideCount === opt.count
+                    ? "border-[#2F5BFF] bg-[#2F5BFF]/5 ring-2 ring-[#2F5BFF]/20"
+                    : "border-[#101A3A]/10 bg-white hover:border-[#101A3A]/25",
+                  busy && "pointer-events-none opacity-60"
+                )}
+              >
+                <span
+                  className={clsx(
+                    "text-sm font-bold",
+                    slideCount === opt.count ? "text-[#2F5BFF]" : "text-[#101A3A]"
+                  )}
+                >
+                  {opt.label}
+                </span>
+                <span className="text-[11px] text-[#5a6384] mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -346,9 +394,36 @@ function NewDeckForm() {
   );
 }
 
+function NewDeckSkeleton() {
+  return (
+    <div className="mx-auto max-w-xl space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48 rounded-xl" />
+        <Skeleton className="h-4 w-72 rounded-lg" />
+      </div>
+      <div className="space-y-5 rounded-2xl border border-[#101A3A]/10 bg-white p-6 shadow-sm">
+        <div className="flex gap-2">
+          <Skeleton className="h-9 flex-1 rounded-xl" />
+          <Skeleton className="h-9 flex-1 rounded-xl" />
+        </div>
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <div className="space-y-2 pt-2">
+          <Skeleton className="h-4 w-28 rounded" />
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-10 rounded-xl" />
+            ))}
+          </div>
+        </div>
+        <Skeleton className="h-12 w-full rounded-xl pt-2" />
+      </div>
+    </div>
+  );
+}
+
 export default function NewDeckPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<NewDeckSkeleton />}>
       <NewDeckForm />
     </Suspense>
   );

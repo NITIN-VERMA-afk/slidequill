@@ -94,9 +94,23 @@ export async function buildPptx(
       s.addText("Made with Slidequill", {
         x: "5%",
         y: "95%",
-        w: "30%",
+        w: "25%",
         h: "4%",
         fontSize: 10,
+        color: mutedColor,
+        fontFace: bodyFont,
+        valign: "bottom",
+      });
+    }
+
+    // Footer: source page citation if available
+    if (slide.sourcePage) {
+      s.addText(`Source: p. ${slide.sourcePage}`, {
+        x: isFreeUser ? "32%" : "5%",
+        y: "95%",
+        w: "25%",
+        h: "4%",
+        fontSize: 9,
         color: mutedColor,
         fontFace: bodyFont,
         valign: "bottom",
@@ -115,6 +129,15 @@ export async function buildPptx(
       );
 
       if (hasBgImage) {
+        // Dark base rectangle so text is legible even if image fails or is slow to load
+        s.addShape(pptx.ShapeType.rect, {
+          x: "0%",
+          y: "0%",
+          w: "100%",
+          h: "100%",
+          fill: { color: "0a0f1d" },
+          line: { type: "none" },
+        });
         await addSlideImage(
           s,
           c.imageUrl,
@@ -238,6 +261,14 @@ export async function buildPptx(
       );
 
       if (hasBgImage) {
+        s.addShape(pptx.ShapeType.rect, {
+          x: "0%",
+          y: "0%",
+          w: "100%",
+          h: "100%",
+          fill: { color: "0a0f1d" },
+          line: { type: "none" },
+        });
         await addSlideImage(
           s,
           c.imageUrl,
@@ -358,17 +389,19 @@ export async function buildPptx(
       if (slide.layout === "bullets") {
         if (c?.bullets) {
           if (c?.imageUrl) {
+            // Cap at 4 bullets beside photo, increase font, give text ~55% width
+            const displayBullets = (c.bullets as string[]).slice(0, 4);
             s.addText(
-              c.bullets.map((b: string) => ({
+              displayBullets.map((b: string) => ({
                 text: b,
                 options: { bullet: true },
               })),
               {
                 x: "5%",
                 y: "22%",
-                w: "48%",
+                w: "55%",
                 h: "70%",
-                fontSize: 22,
+                fontSize: 24,
                 color: bodyColor,
                 fontFace: bodyFont,
                 valign: "top",
@@ -378,9 +411,9 @@ export async function buildPptx(
             await addSlideImage(
               s,
               c.imageUrl,
-              { x: "56%", y: "22%", w: "39%", h: "68%" },
+              { x: "63%", y: "22%", w: "32%", h: "66%" },
               c.photographer,
-              { x: "56%", y: "91%", w: "39%", h: "4%" },
+              { x: "63%", y: "89%", w: "32%", h: "4%" },
               mutedColor
             );
           } else {
@@ -714,6 +747,14 @@ export async function buildPptx(
         );
 
         if (hasBgImage) {
+          s.addShape(pptx.ShapeType.rect, {
+            x: "0%",
+            y: "0%",
+            w: "100%",
+            h: "100%",
+            fill: { color: "0a0f1d" },
+            line: { type: "none" },
+          });
           await addSlideImage(
             s,
             c.imageUrl,
@@ -821,6 +862,14 @@ export async function buildPptx(
         }
       } else if (slide.layout === "image") {
         if (c?.variant === "full_bleed") {
+          s.addShape(pptx.ShapeType.rect, {
+            x: "0%",
+            y: "0%",
+            w: "100%",
+            h: "100%",
+            fill: { color: "0a0f1d" },
+            line: { type: "none" },
+          });
           await addSlideImage(
             s,
             c?.imageUrl,
@@ -870,20 +919,23 @@ export async function buildPptx(
             { x: "5%", y: "89%", w: "42%", h: "4%" },
             mutedColor
           );
-          if (c?.caption) {
-            s.addText(c.caption, {
+          let currentY = 22;
+          if (c?.heading) {
+            s.addText(c.heading, {
               x: "52%",
-              y: "22%",
+              y: `${currentY}%`,
               w: "43%",
-              h: "12%",
-              fontSize: 22,
+              h: "15%",
+              fontSize: 26,
               bold: true,
               color: headingColor,
               fontFace: headingFont,
               shrinkText: true,
             });
+            currentY += 16;
           }
-          if (c?.bullets) {
+          if (c?.bullets && c.bullets.length > 0) {
+            const bulletHeight = c?.caption ? (c?.heading ? 38 : 50) : (c?.heading ? 52 : 65);
             s.addText(
               c.bullets.map((b: string) => ({
                 text: b,
@@ -891,9 +943,9 @@ export async function buildPptx(
               })),
               {
                 x: "52%",
-                y: c?.caption ? "36%" : "22%",
+                y: `${currentY}%`,
                 w: "43%",
-                h: c?.caption ? "52%" : "65%",
+                h: `${bulletHeight}%`,
                 fontSize: 18,
                 color: bodyColor,
                 fontFace: bodyFont,
@@ -901,6 +953,20 @@ export async function buildPptx(
                 shrinkText: true,
               }
             );
+            currentY += bulletHeight + 2;
+          }
+          if (c?.caption) {
+            s.addText(c.caption, {
+              x: "52%",
+              y: `${currentY}%`,
+              w: "43%",
+              h: "12%",
+              fontSize: 16,
+              italic: true,
+              color: bodyColor,
+              fontFace: bodyFont,
+              shrinkText: true,
+            });
           }
         }
       }

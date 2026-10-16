@@ -5,6 +5,8 @@ import Link from "next/link";
 import { FolderOpen, Plus, Clock, CheckCircle2, AlertCircle, Loader2, Trash2, Download } from "lucide-react";
 import { clsx } from "clsx";
 import DeckCard from "@/components/app/DeckCard";
+import DeckCardSkeleton from "@/components/app/DeckCardSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DeckStatus } from "@/app/models/Deck";
 
 interface Deck {
@@ -14,6 +16,8 @@ interface Deck {
   sourceName: string;
   theme: string;
   createdAt: string;
+  coverImage?: string | null;
+  slideCount?: number;
 }
 
 export default function DecksPage() {
@@ -39,8 +43,22 @@ export default function DecksPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-[#5a6384]" />
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-40 rounded-xl" />
+            <Skeleton className="h-4 w-24 rounded-lg" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-xl" />
+        </div>
+
+        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <li key={i} className="h-full">
+              <DeckCardSkeleton />
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }
@@ -72,9 +90,9 @@ export default function DecksPage() {
           </Link>
         </div>
       ) : (
-        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
           {decks.map((deck) => (
-            <li key={deck._id}>
+            <li key={deck._id} className="h-full">
               <DeckCard deck={deck} onDelete={handleDelete} onRename={handleRename} />
             </li>
           ))}

@@ -7,6 +7,8 @@ import { getExportLimiter } from "@/lib/ratelimit";
 import { buildPptx } from "@/lib/export/pptx";
 import { trackEvent } from "@/lib/analytics";
 
+export const maxDuration = 60;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

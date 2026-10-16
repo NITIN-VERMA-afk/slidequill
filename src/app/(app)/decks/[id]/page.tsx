@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import type { OutlineSection, ISlide } from "@/app/models/Deck";
 import SlideRenderer from "@/components/app/SlideRenderer";
+import DeckEditorSkeleton from "@/components/app/DeckEditorSkeleton";
+import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,7 @@ export default function DeckEditorPage({
   const [theme, setTheme] = useState("modern");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [isExporting, setIsExporting] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const [viewMode, setViewMode] = useState<"outline" | "slides">("outline");
@@ -128,8 +131,9 @@ export default function DeckEditorPage({
         throw new Error(data.error || "Failed to delete source text.");
       }
       setDeck((prev) => (prev ? { ...prev, hasSourceText: false } : null));
+      toast.success("Source document text deleted.");
     } catch (err: any) {
-      alert(err.message || "Failed to delete source text.");
+      toast.error(err.message || "Failed to delete source text.");
     } finally {
       setDeletingSource(false);
     }
@@ -302,8 +306,9 @@ export default function DeckEditorPage({
       if (!res.ok) throw new Error(data.error);
       setSlides(data.slides);
       setTheme(data.theme);
+      toast.success("Change undone.");
     } catch (err: any) {
-      alert(err.message || "Undo failed.");
+      toast.error(err.message || "Undo failed.");
     }
   };
 
@@ -328,8 +333,9 @@ export default function DeckEditorPage({
       newSlides[activeSlideIdx] = data.slide;
       setSlides(newSlides);
       setRegenInstruction("");
+      toast.success("Slide regenerated!");
     } catch (err: any) {
-      alert(err.message || "Failed to regenerate slide.");
+      toast.error(err.message || "Failed to regenerate slide.");
     } finally {
       setRegenerating(false);
     }
@@ -353,7 +359,7 @@ export default function DeckEditorPage({
       } else {
         const errData = await res.json().catch(() => null);
         if (errData?.error) {
-          alert(errData.error);
+          toast.error(errData.error);
         }
         setSaveStatus("idle");
       }
@@ -457,11 +463,7 @@ export default function DeckEditorPage({
   }
 
   if (!deck) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-[#5a6384]" />
-      </div>
-    );
+    return <DeckEditorSkeleton />;
   }
 
   const isOutlining = deck.status === "outlining";
@@ -477,9 +479,10 @@ export default function DeckEditorPage({
           <input
             type="text"
             value={title}
+            title={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={isOutlining || isGenerating}
-            className="w-full max-w-sm rounded-xl border border-transparent bg-transparent px-2 py-1 text-2xl font-extrabold text-[#101A3A] [font-family:var(--font-display)] outline-none transition hover:border-[#101A3A]/15 focus:border-[#2F5BFF] focus:ring-2 focus:ring-[#2F5BFF]/15 focus:bg-white disabled:opacity-60"
+            className="w-full max-w-xl truncate text-ellipsis rounded-xl border border-transparent bg-transparent px-2 py-1 text-2xl font-extrabold text-[#101A3A] [font-family:var(--font-display)] outline-none transition hover:border-[#101A3A]/15 focus:border-[#2F5BFF] focus:ring-2 focus:ring-[#2F5BFF]/15 focus:bg-white disabled:opacity-60"
           />
           {/* Save indicator */}
           <div className="flex h-8 items-center text-xs text-[#5a6384] w-20">
@@ -559,12 +562,9 @@ export default function DeckEditorPage({
           {viewMode === "slides" && slides.length > 0 && (
             <button
               onClick={async () => {
-                if (!deckId) return;
-                const btn = document.getElementById("export-btn") as HTMLButtonElement;
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = `<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Exporting...`;
-                
+                if (!deckId || isExporting) return;
+                setIsExporting(true);
+                const toastId = toast.loading("Preparing PowerPoint export...");
                 try {
                   const res = await fetch(`/api/decks/${deckId}/export`);
                   if (!res.ok) {
@@ -586,17 +586,25 @@ export default function DeckEditorPage({
                   a.click();
                   a.remove();
                   window.URL.revokeObjectURL(url);
+                  toast.success("PowerPoint presentation downloaded!", { id: toastId });
                 } catch (err: any) {
-                  alert(err.message || "Failed to export presentation.");
+                  toast.error(err.message || "Failed to export presentation.", { id: toastId });
                 } finally {
-                  btn.disabled = false;
-                  btn.innerHTML = originalText;
+                  setIsExporting(false);
                 }
               }}
-              id="export-btn"
-              className="flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2548cc] disabled:opacity-50"
+              disabled={isExporting}
+              className="flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2548cc] disabled:opacity-60 transition"
             >
-              <Download size={16} /> Download PPTX
+              {isExporting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Exporting...
+                </>
+              ) : (
+                <>
+                  <Download size={16} /> Download PPTX
+                </>
+              )}
             </button>
           )}
         </div>

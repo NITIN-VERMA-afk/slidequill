@@ -150,7 +150,7 @@ This checklist enumerates all production requirements across infrastructure, sec
 - [ ] **Google OAuth Redirect URI:**
   - In Google Cloud Console $\rightarrow$ APIs & Services $\rightarrow$ Credentials:
   - Add Authorized JavaScript Origin: `https://slidequill.in`
-  - Add Authorized Redirect URI: `https://slidequill.in/api/auth/callback/google`
+  - Add Authorized Redirect URI: `https://slidequill.in/api/auth/google/callback`
 
 ---
 

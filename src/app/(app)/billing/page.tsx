@@ -7,6 +7,7 @@ import { CreditCard, Zap, Loader2, AlertCircle, CheckCircle2 } from "lucide-reac
 import { PLANS } from "@/lib/plans";
 import { clsx } from "clsx";
 import Link from "next/link";
+import BillingLoading from "./loading";
 
 interface PaymentRecord {
   _id: string;
@@ -130,11 +131,7 @@ export default function BillingPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-[#5a6384]" />
-      </div>
-    );
+    return <BillingLoading />;
   }
 
   return (
