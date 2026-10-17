@@ -12,7 +12,8 @@ export default function ContactPage() {
     setStatus("loading");
     setMessage("");
 
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const data = {
       name: formData.get("name"),
       email: formData.get("email"),
@@ -28,13 +29,14 @@ export default function ContactPage() {
 
       if (res.ok) {
         setStatus("success");
-        e.currentTarget.reset();
+        form.reset();
       } else {
-        const body = await res.json();
+        const body = await res.json().catch(() => ({}));
         setStatus("error");
         setMessage(body.error || "Failed to send message.");
       }
-    } catch {
+    } catch (err) {
+      console.error("Form submit error:", err);
       setStatus("error");
       setMessage("Network error. Please try again.");
     }
@@ -132,8 +134,9 @@ export default function ContactPage() {
                     id="message"
                     name="message"
                     required
+                    minLength={10}
                     rows={4}
-                    placeholder="Tell us about your project or inquiry..."
+                    placeholder="Tell us about your project or inquiry (at least 10 characters)..."
                     className="w-full rounded-xl bg-white/5 border border-white/10 px-5 py-3.5 text-white placeholder:text-white/30 outline-none focus:border-[#2F5BFF] focus:bg-white/10 transition-all duration-300 resize-none"
                   />
                 </div>

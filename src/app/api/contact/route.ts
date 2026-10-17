@@ -6,9 +6,9 @@ import { getRedis } from "@/lib/ratelimit";
 
 
 const schema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  message: z.string().min(10).max(2000),
+  name: z.string().trim().min(1, "Name is required.").max(100, "Name cannot exceed 100 characters."),
+  email: z.string().trim().email("Please provide a valid email address."),
+  message: z.string().trim().min(10, "Message must be at least 10 characters long.").max(2000, "Message is too long."),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,11 +26,11 @@ export async function POST(req: NextRequest) {
 
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
+    const errorMsg = parsed.error.issues[0]?.message || "Invalid form data.";
+    return NextResponse.json({ error: errorMsg }, { status: 400 });
   }
 
   const supportEmail = process.env.SUPPORT_EMAIL;
@@ -39,10 +39,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Configuration error" }, { status: 500 });
   }
 
+  const emailFrom = process.env.EMAIL_FROM || "Slidequill Contact <hello@slidequill.in>";
+
   try {
     await resend.emails.send({
-      from: "Slidequill Contact <contact@updates.slidequill.com>", // Update with verified sender
+      from: emailFrom,
       to: supportEmail,
+      replyTo: parsed.data.email,
       subject: `New message from ${parsed.data.name}`,
       text: `Name: ${parsed.data.name}\nEmail: ${parsed.data.email}\n\nMessage:\n${parsed.data.message}`,
     });
