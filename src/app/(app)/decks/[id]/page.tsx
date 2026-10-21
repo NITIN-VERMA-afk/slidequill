@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -31,6 +32,8 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import type { OutlineSection, ISlide } from "@/app/models/Deck";
 import SlideRenderer from "@/components/app/SlideRenderer";
@@ -115,6 +118,7 @@ export default function DeckEditorPage({
   const [theme, setTheme] = useState("modern");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [outlineError, setOutlineError] = useState<string | null>(null);
   const [generatingInAnotherTab, setGeneratingInAnotherTab] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -133,14 +137,36 @@ export default function DeckEditorPage({
   
   // Slide Management & Reorder State
   const [showAddSlideMenu, setShowAddSlideMenu] = useState(false);
+  const addSlideMenuRef = useRef<HTMLDivElement>(null);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [reorderAnnouncement, setReorderAnnouncement] = useState("");
   const reorderManagerRef = useRef<ReorderDebounceManager | null>(null);
 
+  useEffect(() => {
+    if (!showAddSlideMenu) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (addSlideMenuRef.current && !addSlideMenuRef.current.contains(e.target as Node)) {
+        setShowAddSlideMenu(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowAddSlideMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showAddSlideMenu]);
+
   // Present Mode & Share State
   const [isPresenting, setIsPresenting] = useState(false);
   const [showSpeakerNotesInPresent, setShowSpeakerNotesInPresent] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
 
@@ -264,35 +290,107 @@ export default function DeckEditorPage({
 
   // ── Resumable Client-Driven Outline Stepper ─────────────────────────────────
   const drivingOutlineRef = useRef(false);
+  const outlineRetryCountRef = useRef(0);
 
   useEffect(() => {
-    if (!deckId || !deck || deck.status !== "outlining") {
+    if (!deckId || !deck || deck.status !== "outlining" || outlineError) {
       drivingOutlineRef.current = false;
       return;
     }
     if (drivingOutlineRef.current) return;
 
     drivingOutlineRef.current = true;
+    let isMounted = true;
+
     const driveNextChunk = async () => {
       try {
-        const res = await fetch(`/api/decks/${deckId}/outline`, { method: "POST" });
-        const data = await res.json();
+        const res = await fetch(`/api/decks/${deckId}/outline`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!isMounted) return;
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          // If server failed (429 rate limit or 5xx), retry up to 3 times with backoff
+          if (outlineRetryCountRef.current < 3) {
+            const retryAfterHeader = res.headers.get("Retry-After");
+            const retryAfterMs = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : 0;
+            const delays = [2000, 5000, 10000];
+            const delay = Math.min(retryAfterMs || delays[outlineRetryCountRef.current] || 10000, 15000);
+            outlineRetryCountRef.current += 1;
+            console.warn(
+              `[Outline] Step failed (${res.status}), retrying in ${delay}ms (attempt ${outlineRetryCountRef.current}/3)…`
+            );
+            await new Promise((r) => setTimeout(r, delay));
+            drivingOutlineRef.current = false;
+            if (isMounted) setRetryTrigger((prev) => prev + 1);
+            return;
+          }
+
+          setOutlineError(
+            body?.error || "Outline generation paused due to a server error. Please try again."
+          );
+          const d = await fetchDeck(deckId);
+          if (d && isMounted) {
+            setDeck(d);
+            if (d.title) setTitle(d.title);
+            if (d.outline) setOutline(d.outline);
+          }
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+        if (!isMounted || !data) return;
+
+        // Reset errors and retry counter on success
+        outlineRetryCountRef.current = 0;
+        setOutlineError(null);
+
         if (data.deck) {
           setDeck(data.deck);
           setTitle(data.deck.title);
           setOutline(data.deck.outline ?? []);
         } else if (data.status === "outlining" && data.progress) {
           setDeck((prev) => (prev ? { ...prev, outlineProgress: data.progress } : null));
+        } else {
+          const d = await fetchDeck(deckId);
+          if (d && isMounted) {
+            setDeck(d);
+            if (d.title) setTitle(d.title);
+            if (d.outline) setOutline(d.outline);
+          }
         }
       } catch (err) {
-        console.error("Outline step error:", err);
+        if (!isMounted) return;
+        console.error("Outline step network error:", err);
+        if (outlineRetryCountRef.current < 3) {
+          const delays = [2000, 5000, 10000];
+          const delay = delays[outlineRetryCountRef.current] || 10000;
+          outlineRetryCountRef.current += 1;
+          console.warn(
+            `[Outline] Network error, retrying in ${delay}ms (attempt ${outlineRetryCountRef.current}/3)…`
+          );
+          await new Promise((r) => setTimeout(r, delay));
+          drivingOutlineRef.current = false;
+          if (isMounted) setRetryTrigger((prev) => prev + 1);
+          return;
+        }
+        setOutlineError("Network connection interrupted during outline generation. Please retry.");
+        const d = await fetchDeck(deckId);
+        if (d && isMounted) setDeck(d);
       } finally {
         drivingOutlineRef.current = false;
       }
     };
 
     driveNextChunk();
-  }, [deckId, deck?.status, deck?.outlineProgress?.chunksDone]);
+
+    return () => {
+      isMounted = false;
+      drivingOutlineRef.current = false;
+    };
+  }, [deckId, deck?.status, deck?.outlineProgress?.chunksDone, outlineError, retryTrigger, fetchDeck]);
 
 
   // ── Resumable Client-Driven Slide Generation Stepper ────────────────────────
@@ -789,6 +887,19 @@ export default function DeckEditorPage({
   };
 
   // ── Present Mode & Fullscreen Sync ──────────────────────────────────────────
+  const toggleFullscreen = useCallback(() => {
+    if (typeof document === "undefined") return;
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  }, []);
+
   const handleEnterPresentMode = async () => {
     flushPendingReorder();
     if (pendingNotesSaveRef.current) {
@@ -811,14 +922,27 @@ export default function DeckEditorPage({
     setIsPresenting(false);
   }, []);
 
+  // Sync fullscreen state
   useEffect(() => {
     const onFullscreenChange = () => {
-      if (typeof document !== "undefined" && !document.fullscreenElement && isPresenting) {
+      const fs = Boolean(document.fullscreenElement);
+      setIsFullscreen(fs);
+      if (!fs && isPresenting) {
         setIsPresenting(false);
       }
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, [isPresenting]);
+
+  // Lock body scroll while presenting
+  useEffect(() => {
+    if (!isPresenting) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [isPresenting]);
 
   useEffect(() => {
@@ -838,19 +962,13 @@ export default function DeckEditorPage({
         setShowSpeakerNotesInPresent((prev) => !prev);
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
-        if (typeof document !== "undefined") {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
-          } else {
-            document.exitFullscreen().catch(() => {});
-          }
-        }
+        toggleFullscreen();
       }
     };
 
     window.addEventListener("keydown", handlePresentKeyDown);
     return () => window.removeEventListener("keydown", handlePresentKeyDown);
-  }, [isPresenting, slides.length, handleExitPresentMode]);
+  }, [isPresenting, slides.length, handleExitPresentMode, toggleFullscreen]);
 
   // ── Share Link Toggle ────────────────────────────────────────────────────────
   const handleToggleShare = async () => {
@@ -1372,15 +1490,15 @@ export default function DeckEditorPage({
               disabled={isExportingPdf || isExporting}
               title="Export as PDF Document"
               aria-label="Export PDF"
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 transition shadow-sm"
+              className="flex items-center gap-1.5 rounded-xl border border-[#101A3A]/15 bg-white px-3.5 py-2 text-sm font-semibold text-[#101A3A] hover:bg-[#F4F6FB] disabled:opacity-60 transition shadow-sm"
             >
               {isExportingPdf ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Generating PDF...
+                  <Loader2 size={16} className="animate-spin text-[#2F5BFF]" /> Generating PDF...
                 </>
               ) : (
                 <>
-                  <FileText size={16} /> Export PDF
+                  <FileText size={16} className="text-[#2F5BFF]" /> Export PDF
                 </>
               )}
             </button>
@@ -1418,6 +1536,26 @@ export default function DeckEditorPage({
           ) : (
             <span>Generating your outline with AI… this takes about 10 seconds.</span>
           )}
+        </div>
+      )}
+
+      {outlineError && isOutlining && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <AlertCircle size={16} className="shrink-0 text-amber-600" />
+            <span>{outlineError}</span>
+          </div>
+          <button
+            onClick={() => {
+              setOutlineError(null);
+              outlineRetryCountRef.current = 0;
+              drivingOutlineRef.current = false;
+              setRetryTrigger((prev) => prev + 1);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2F5BFF] text-white text-xs font-semibold hover:bg-[#2548cc] transition shadow-sm"
+          >
+            <RefreshCw size={13} /> Retry
+          </button>
         </div>
       )}
 
@@ -1529,46 +1667,57 @@ export default function DeckEditorPage({
           <div className="absolute inset-0 flex gap-6">
             
             {/* Left Rail: Thumbnails */}
-            <div className="w-56 shrink-0 flex flex-col gap-3 overflow-y-auto pr-2 pb-10">
+            <div className="w-56 shrink-0 flex flex-col h-full min-h-0">
               {/* Accessible Live Region for Reorder Announcements */}
               <div className="sr-only" aria-live="polite" aria-atomic="true">
                 {reorderAnnouncement}
               </div>
 
-              {/* Rail Header with Add Slide Button */}
-              <div className="flex items-center justify-between pb-1 border-b border-[#101A3A]/10">
+              {/* Rail Header with Add Slide Button (Pinned at top, outside scroll container) */}
+              <div className="relative z-30 flex items-center justify-between pb-2 mb-2 border-b border-[#101A3A]/10 shrink-0">
                 <span className="text-[11px] font-bold text-[#5a6384] uppercase tracking-wider">
                   Slides ({slides.length}/{MAX_DECK_SLIDES})
                 </span>
-                <div className="relative">
+                <div className="relative" ref={addSlideMenuRef}>
                   <button
                     onClick={() => setShowAddSlideMenu((prev) => !prev)}
                     disabled={isGenerating || isOutlining || slides.length >= MAX_DECK_SLIDES}
                     aria-label="Add new slide"
-                    className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-[#2F5BFF] text-white rounded-md shadow-sm hover:bg-[#2548cc] transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#2F5BFF] focus-visible:outline-none"
+                    aria-expanded={showAddSlideMenu}
+                    aria-haspopup="true"
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 bg-[#2F5BFF] text-white rounded-md shadow-sm hover:bg-[#2548cc] active:scale-95 transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#2F5BFF] focus-visible:outline-none"
                   >
                     <Plus size={13} /> Add
                   </button>
 
                   {/* Layout Picker Dropdown */}
                   {showAddSlideMenu && (
-                    <div className="absolute left-0 mt-1 w-48 bg-white border border-[#101A3A]/15 rounded-xl shadow-xl z-30 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-100">
-                      <div className="px-3 py-1 text-[10px] font-bold uppercase text-[#5a6384] border-b border-[#101A3A]/10">
-                        Choose Layout
+                    <div className="absolute right-0 mt-1.5 w-52 bg-white border border-[#101A3A]/15 rounded-xl shadow-2xl z-50 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5">
+                      <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#5a6384] border-b border-[#101A3A]/10 flex items-center justify-between">
+                        <span>Choose Layout</span>
+                        <span className="text-[9px] font-normal lowercase text-[#9aa3bf]">esc</span>
                       </div>
-                      {LAYOUT_OPTIONS.map((item) => (
-                        <button
-                          key={item.value}
-                          onClick={() => handleAddSlide(item.value)}
-                          className="w-full text-left px-3 py-1.5 text-xs text-[#101A3A] hover:bg-[#F4F6FB] hover:text-[#2F5BFF] transition flex items-center justify-between font-medium"
-                        >
-                          {item.label}
-                        </button>
-                      ))}
+                      <div className="max-h-72 overflow-y-auto py-1">
+                        {LAYOUT_OPTIONS.map((item) => (
+                          <button
+                            key={item.value}
+                            onClick={() => handleAddSlide(item.value)}
+                            className="w-full text-left px-3 py-2 text-xs text-[#101A3A] hover:bg-[#F4F6FB] hover:text-[#2F5BFF] transition flex items-center justify-between font-medium group"
+                          >
+                            <span>{item.label}</span>
+                            <span className="text-[10px] text-[#9aa3bf] group-hover:text-[#2F5BFF]/70 truncate max-w-[90px] text-right">
+                              {item.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Scrollable Thumbnails Container */}
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-2 pb-10">
 
               {slides.map((slide, idx) => (
                 <div
@@ -1661,6 +1810,7 @@ export default function DeckEditorPage({
                     : `Generating slide ${Math.min((deck.slidesDone ?? slides.length) + 1, deck.slidesTotal || outline.length || 1)} of ${deck.slidesTotal || outline.length || 1}`}
                 </div>
               )}
+              </div>
             </div>
 
             {/* Center Canvas */}
@@ -2156,20 +2306,24 @@ export default function DeckEditorPage({
         )}
       </div>
 
-      {/* Fullscreen Present Mode Overlay */}
-      {isPresenting && (
-        <div className="fixed inset-0 z-50 bg-[#070913] text-white flex flex-col justify-between select-none">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-white/60 uppercase tracking-wider">
+      {/* Fullscreen Present Mode Overlay (Portaled to document.body to escape layout overflow & stacking contexts) */}
+      {typeof document !== "undefined" && isPresenting && createPortal(
+        <div
+          className="fixed inset-0 text-white flex flex-col justify-between overflow-hidden select-none"
+          style={{ backgroundColor: "#070913", zIndex: 99999 }}
+          data-testid="fullscreen-present-overlay"
+        >
+          {/* Top Floating Bar */}
+          <header className="flex items-center justify-between px-6 py-3.5 bg-gradient-to-b from-black/85 via-black/50 to-transparent shrink-0 z-30">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs font-bold text-white/70 uppercase tracking-wider truncate max-w-sm sm:max-w-md">
                 {title || "Presentation"}
               </span>
-              <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-white/80">
+              <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-white/80 shrink-0">
                 {activeSlideIdx + 1} / {slides.length}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowSpeakerNotesInPresent((prev) => !prev)}
                 className={clsx(
@@ -2179,22 +2333,44 @@ export default function DeckEditorPage({
                     : "bg-white/10 text-white/80 border-transparent hover:bg-white/20"
                 )}
                 aria-label="Toggle speaker notes"
+                title="Toggle speaker notes (S)"
               >
                 <FileText size={14} /> Notes (S)
               </button>
               <button
-                onClick={handleExitPresentMode}
+                onClick={toggleFullscreen}
                 className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition"
-                aria-label="Exit Present Mode (Esc)"
+                aria-label={isFullscreen ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)"}
+                title={isFullscreen ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)"}
               >
-                <X size={18} />
+                {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+              <button
+                onClick={handleExitPresentMode}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-semibold text-xs transition shadow-sm"
+                aria-label="Exit Present Mode (Esc)"
+                title="Exit Present Mode (Esc)"
+              >
+                <X size={16} />
+                <span>Exit</span>
               </button>
             </div>
-          </div>
+          </header>
 
-          {/* Slide Display */}
-          <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-            <div className="w-full max-w-6xl aspect-video rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/15 bg-white relative">
+          {/* Slide Stage (Responsive 16:9, guaranteed to fit viewport without overflow) */}
+          <main
+            className="flex-1 flex items-center justify-center p-3 sm:p-6 min-h-0 overflow-hidden relative"
+            onClick={() => setActiveSlideIdx((prev) => Math.min(slides.length - 1, prev + 1))}
+          >
+            <div
+              className="aspect-video rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/15 bg-white relative flex items-center justify-center cursor-pointer transition-transform duration-150"
+              style={{
+                maxHeight: "calc(100vh - 130px)",
+                maxWidth: "min(100%, calc((100vh - 130px) * (16 / 9)))",
+                width: "100%",
+              }}
+              title="Click slide to advance"
+            >
               <SlideRenderer
                 slide={slides[activeSlideIdx] as any}
                 theme={theme}
@@ -2202,49 +2378,70 @@ export default function DeckEditorPage({
                 className="w-full h-full pointer-events-none"
               />
             </div>
-          </div>
 
-          {/* Speaker Notes Overlay (Owner only) */}
-          {showSpeakerNotesInPresent && (
-            <div className="mx-auto max-w-2xl mb-4 p-4 rounded-xl bg-black/85 backdrop-blur-md border border-white/15 text-white/90 text-sm shadow-2xl animate-in fade-in slide-in-from-bottom-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1 flex items-center justify-between">
-                <span>Speaker Notes</span>
-                <span className="text-[10px]">Press S to hide</span>
-              </div>
-              <p className="leading-relaxed whitespace-pre-line">
-                {slides[activeSlideIdx]?.notes || "No notes for this slide."}
-              </p>
-            </div>
-          )}
-
-          {/* Bottom Bar */}
-          <div className="p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between">
-            <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden">
+            {/* Floating Speaker Notes Overlay */}
+            {showSpeakerNotesInPresent && (
               <div
-                className="h-full bg-[#2F5BFF] transition-all duration-300"
-                style={{ width: `${((activeSlideIdx + 1) / Math.max(1, slides.length)) * 100}%` }}
-              />
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-6 inset-x-4 mx-auto max-w-2xl p-4 rounded-xl bg-black/90 backdrop-blur-md border border-white/20 text-white/90 text-sm shadow-2xl z-30 max-h-44 overflow-y-auto animate-in fade-in slide-in-from-bottom-2"
+              >
+                <div className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1 flex items-center justify-between sticky top-0 bg-transparent">
+                  <span>Speaker Notes</span>
+                  <span className="text-[10px]">Press S to hide</span>
+                </div>
+                <p className="leading-relaxed whitespace-pre-line text-xs sm:text-sm">
+                  {slides[activeSlideIdx]?.notes || "No notes for this slide."}
+                </p>
+              </div>
+            )}
+          </main>
+
+          {/* Bottom Floating Bar */}
+          <footer className="px-6 py-3.5 bg-gradient-to-t from-black/85 via-black/50 to-transparent flex items-center justify-between shrink-0 z-30">
+            <div className="flex items-center gap-3">
+              <div className="w-36 sm:w-48 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#2F5BFF] transition-all duration-300"
+                  style={{ width: `${((activeSlideIdx + 1) / Math.max(1, slides.length)) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-white/70 font-semibold">
+                {activeSlideIdx + 1} / {slides.length}
+              </span>
+              <span className="text-[11px] text-white/40 hidden sm:inline ml-2">
+                Click slide or use &larr; &rarr; keys
+              </span>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2.5 pr-12 sm:pr-6">
               <button
-                onClick={() => setActiveSlideIdx((prev) => Math.max(0, prev - 1))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveSlideIdx((prev) => Math.max(0, prev - 1));
+                }}
                 disabled={activeSlideIdx === 0}
                 aria-label="Previous Slide (Left Arrow)"
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white transition"
+                title="Previous Slide (Left Arrow)"
+                className="flex items-center justify-center p-2.5 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white transition focus:ring-2 focus:ring-blue-400"
               >
                 <ChevronLeft size={20} />
               </button>
               <button
-                onClick={() => setActiveSlideIdx((prev) => Math.min(slides.length - 1, prev + 1))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveSlideIdx((prev) => Math.min(slides.length - 1, prev + 1));
+                }}
                 disabled={activeSlideIdx === slides.length - 1}
                 aria-label="Next Slide (Right Arrow)"
-                className="p-2 rounded-full bg-[#2F5BFF] hover:bg-[#2548cc] disabled:opacity-30 text-white transition shadow-lg"
+                title="Next Slide (Right Arrow)"
+                className="flex items-center justify-center p-2.5 rounded-full bg-[#2F5BFF] hover:bg-[#2548cc] disabled:opacity-20 text-white transition shadow-lg focus:ring-2 focus:ring-blue-400"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
-          </div>
-        </div>
+          </footer>
+        </div>,
+        document.body
       )}
 
       {/* Share Modal Dialog */}

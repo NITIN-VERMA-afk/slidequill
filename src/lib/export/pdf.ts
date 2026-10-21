@@ -11,9 +11,6 @@ export function findSystemChrome(): string | undefined {
   if (process.env.CHROME_EXECUTABLE_PATH && fs.existsSync(process.env.CHROME_EXECUTABLE_PATH)) {
     return process.env.CHROME_EXECUTABLE_PATH;
   }
-  if (process.env.NODE_ENV === "production") {
-    return undefined;
-  }
   const candidates = [
     // Windows
     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -28,7 +25,7 @@ export function findSystemChrome(): string | undefined {
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   ];
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
+    if (fs.existsSync(/* turbopackIgnore: true */ candidate)) return candidate;
   }
   return undefined;
 }
@@ -52,29 +49,47 @@ export async function renderDeckToPdf({
   appOrigin,
   timeoutMs = 35000,
 }: RenderPdfOptions): Promise<Buffer> {
-  let executablePath: string;
+  let executablePath: string | undefined;
 
-  try {
-    const sparticuzPath = await chromium.executablePath();
-    if (sparticuzPath && fs.existsSync(sparticuzPath)) {
-      executablePath = sparticuzPath;
-    } else {
-      const fallback = findSystemChrome();
-      if (!fallback) {
-        throw new Error("Chromium binary not found.");
-      }
-      executablePath = fallback;
-    }
-  } catch {
-    const fallback = findSystemChrome();
-    if (!fallback) {
-      throw new Error("Chromium executable path could not be resolved.");
-    }
-    executablePath = fallback;
+  // 1. On Windows and macOS (local dev), use the host Chrome or Edge binary
+  if (process.platform === "win32" || process.platform === "darwin") {
+    executablePath = findSystemChrome();
   }
 
-  // Use chromium.args from @sparticuz/chromium; no --single-process unless proven needed
-  const args = [...chromium.args];
+  // 2. On Linux (Lambda/Vercel serverless), extract and use @sparticuz/chromium
+  if (!executablePath && process.platform === "linux") {
+    try {
+      const sparticuzPath = await chromium.executablePath();
+      if (sparticuzPath && fs.existsSync(sparticuzPath)) {
+        executablePath = sparticuzPath;
+      }
+    } catch {
+      // Fall through to system Chrome
+    }
+  }
+
+  // 3. Fallback to system Chrome if not resolved
+  if (!executablePath) {
+    executablePath = findSystemChrome();
+  }
+
+  if (!executablePath) {
+    throw new Error(
+      "Chromium binary not found. In local development, please ensure Google Chrome or Microsoft Edge is installed, or set CHROME_EXECUTABLE_PATH."
+    );
+  }
+
+  // Use chromium.args for Linux serverless; safe cross-platform flags for local dev
+  const args =
+    process.platform === "linux"
+      ? [...chromium.args]
+      : [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-gpu",
+          "--disable-dev-shm-usage",
+          "--font-render-hinting=none",
+        ];
 
   const browser = await puppeteer.launch({
     args,

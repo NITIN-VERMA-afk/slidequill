@@ -90,10 +90,13 @@ export default async function DeckPrintPage({
             height: 1080px !important;
             background: #ffffff !important;
           }
-          .pdf-slide-page {
+          .pdf-slide-page:not(:last-child) {
             page-break-after: always !important;
             break-after: page !important;
+          }
+          .pdf-slide-page {
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
         .pdf-slide-page {
@@ -102,6 +105,42 @@ export default async function DeckPrintPage({
           position: relative;
           overflow: hidden;
           background: #ffffff;
+        }
+
+        /* Ensure all text in exported PDF is dark/black and high-contrast */
+        .pdf-print-root .bg-\[\#0a0f1d\] {
+          background-color: #ffffff !important;
+        }
+        .pdf-print-root [class*="from-black"] {
+          background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6)) !important;
+        }
+        .pdf-print-root .bg-black\/45 {
+          background-color: transparent !important;
+        }
+        .pdf-print-root .text-white,
+        .pdf-print-root [class*="text-white"] {
+          color: #0f172a !important;
+        }
+        .pdf-print-root [class*="text-white\/85"],
+        .pdf-print-root [class*="text-white\/90"],
+        .pdf-print-root [class*="text-white\/80"] {
+          color: #1e293b !important;
+        }
+        .pdf-print-root [class*="text-white\/60"],
+        .pdf-print-root [class*="text-white\/50"] {
+          color: #475569 !important;
+        }
+        .pdf-print-root [class*="text-white\/30"] {
+          color: rgba(15, 23, 42, 0.25) !important;
+        }
+        .pdf-print-root .bg-black\/60 {
+          background-color: rgba(255, 255, 255, 0.88) !important;
+          color: #1e293b !important;
+          border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
+        .pdf-print-root .border-white\/10,
+        .pdf-print-root .border-white\/20 {
+          border-color: rgba(15, 23, 42, 0.12) !important;
         }
       `}</style>
 

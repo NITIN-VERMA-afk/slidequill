@@ -107,9 +107,20 @@ export default function PublicPresentationViewer({ deck }: PublicPresentationVie
         </div>
       </header>
 
-      {/* Main Slide Stage (Responsive 16:9) */}
-      <main className="flex-1 flex items-center justify-center p-2 sm:p-6 md:p-10">
-        <div className="w-full max-w-6xl aspect-video rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/10 bg-white relative">
+      {/* Main Slide Stage (Responsive 16:9, fits within viewport without overflow) */}
+      <main
+        className="flex-1 flex items-center justify-center p-3 sm:p-6 min-h-0 overflow-hidden relative"
+        onClick={nextSlide}
+      >
+        <div
+          className="aspect-video rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/10 bg-white relative flex items-center justify-center cursor-pointer"
+          style={{
+            maxHeight: "calc(100vh - 130px)",
+            maxWidth: "min(100%, calc((100vh - 130px) * (16 / 9)))",
+            width: "100%",
+          }}
+          title="Click slide to advance"
+        >
           <SlideRenderer
             slide={currentSlide as any}
             theme={deck.theme}
@@ -119,7 +130,10 @@ export default function PublicPresentationViewer({ deck }: PublicPresentationVie
 
           {/* Watermark for free owners only */}
           {deck.showWatermark && (
-            <div className="absolute bottom-2 left-2 z-20 pointer-events-auto">
+            <div
+              className="absolute bottom-2 left-2 z-20 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <a
                 href="https://slidequill.com"
                 target="_blank"
@@ -145,12 +159,13 @@ export default function PublicPresentationViewer({ deck }: PublicPresentationVie
         </div>
 
         {/* Navigation Arrows */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2.5 pr-12 sm:pr-6 pointer-events-auto">
           <button
             onClick={prevSlide}
             disabled={currentIdx === 0}
             aria-label="Previous Slide (Left Arrow)"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
+            title="Previous Slide (Left Arrow)"
+            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-20 text-white transition backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
           >
             <ChevronLeft size={20} />
           </button>
@@ -158,7 +173,8 @@ export default function PublicPresentationViewer({ deck }: PublicPresentationVie
             onClick={nextSlide}
             disabled={currentIdx === total - 1}
             aria-label="Next Slide (Right Arrow)"
-            className="p-2 rounded-full bg-[#2F5BFF] hover:bg-[#2548cc] disabled:opacity-30 disabled:hover:bg-[#2F5BFF] text-white transition backdrop-blur-sm shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
+            title="Next Slide (Right Arrow)"
+            className="p-2.5 rounded-full bg-[#2F5BFF] hover:bg-[#2548cc] disabled:opacity-20 text-white transition backdrop-blur-sm shadow-lg focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:outline-none"
           >
             <ChevronRight size={20} />
           </button>

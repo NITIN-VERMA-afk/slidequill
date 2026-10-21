@@ -37,10 +37,14 @@ export function isAllowedPdfRequest(urlStr: string, appOrigin: string): boolean 
     return false;
   }
 
-  // Exact match with application origin
+  // Exact match with application origin (with localhost <-> 127.0.0.1 dev parity)
   try {
     const parsedApp = new URL(appOrigin);
     if (parsed.origin === parsedApp.origin) {
+      return true;
+    }
+    const isLocalHost = (h: string) => h === "localhost" || h === "127.0.0.1";
+    if (isLocalHost(parsed.hostname) && isLocalHost(parsedApp.hostname) && parsed.port === parsedApp.port) {
       return true;
     }
   } catch {
