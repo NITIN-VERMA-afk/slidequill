@@ -13,6 +13,9 @@ import { applyOps } from "@/lib/ai-edit/apply";
 import { ChatResponseSchema, type Op } from "@/lib/ai-edit/ops";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { getDeckLimiter } from "@/lib/ratelimit";
+import { checkOrigin } from "@/lib/csrf";
+import { isValidObjectId } from "@/lib/validation";
+import { stripStashFromSlide } from "@/lib/slide-mutations";
 
 export const maxDuration = 60;
 const CHAT_MODEL = process.env.CHAT_MODEL ?? process.env.SLIDES_MODEL ?? "gpt-4o-mini";
@@ -34,6 +37,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session?.sub) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
@@ -41,12 +47,19 @@ export async function POST(
   if (!success) return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
 
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
+
   let body;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Bad JSON" }, { status: 400 }); }
   
   const { message, selectedSlideId } = body;
-  if (!message || typeof message !== "string") {
-    return NextResponse.json({ error: "Message is required." }, { status: 400 });
+  if (!message || typeof message !== "string" || !message.trim()) {
+    return NextResponse.json({ error: "Message is required and cannot be empty." }, { status: 400 });
+  }
+  if (message.length > 1000) {
+    return NextResponse.json({ error: "Message must be 1000 characters or fewer." }, { status: 400 });
   }
 
   await connectDB();
@@ -70,7 +83,8 @@ export async function POST(
   await ChatMessage.create({ deckId: id, role: "user", content: message });
 
   // Build context
-  let slidesContext = `CURRENT SLIDES (Template: ${deck.theme}):\n${JSON.stringify(deck.slides, null, 2)}`;
+  const cleanSlides = (deck.slides || []).map(stripStashFromSlide);
+  let slidesContext = `CURRENT SLIDES (Template: ${deck.theme}):\n${JSON.stringify(cleanSlides, null, 2)}`;
   if (selectedSlideId) {
     slidesContext += `\n\nUSER HAS SELECTED SLIDE ID: ${selectedSlideId}`;
   }
@@ -113,8 +127,8 @@ export async function POST(
         reason: `Chat edit: ${message.slice(0, 50)}`,
       });
 
-      // Keep only 20 snapshots
-      const versions = await DeckVersion.find({ deckId: id }).sort({ createdAt: 1 }).select("_id");
+      // Keep only 20 snapshots (pinned initial version is never rotated out)
+      const versions = await DeckVersion.find({ deckId: id, pinned: { $ne: true } }).sort({ createdAt: 1 }).select("_id");
       if (versions.length > 20) {
         const toDelete = versions.slice(0, versions.length - 20).map(v => v._id);
         await DeckVersion.deleteMany({ _id: { $in: toDelete } });

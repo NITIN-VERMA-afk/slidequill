@@ -3,16 +3,18 @@ import { Download, FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import SlideRenderer from "@/components/app/SlideRenderer";
 
 const steps = [
-  { t: "Upload your source", d: "Upload a PDF or DOCX. SlideQuill reads it and drafts an outline." },
-  { t: "Fix the outline", d: "Reorder, rename or delete sections before your slides are written." },
-  { t: "Download the deck", d: "Get an editable .pptx formatted with one of our 6 professionally designed templates. Open it in PowerPoint or Keynote." },
+  { t: "Upload your source", d: "Upload a PDF, Word file (DOCX), or paste text. SlideQuill analyzes your content and drafts a structured outline." },
+  { t: "Refine outline & notes", d: "Reorder, rename, or delete sections before slides are generated. Edit speaker notes and switch templates anytime." },
+  { t: "Download native PPTX", d: "Get an editable .pptx formatted with one of 6 professionally designed templates. Open and edit in PowerPoint, Google Slides, or Keynote." },
 ];
 
 const features = [
-  ["PDF & DOCX → PPTX", "Turn reports, notes and documents into editable PowerPoint files."],
-  ["Start from your content", "SlideQuill works from the material you already have."],
-  ["Regenerate individual slides", "Don't regenerate the entire deck when one slide needs work."],
-  ["Pay only when you need it", "Credits never expire. No monthly subscription."],
+  ["PDF & DOCX → Native PPTX", "Turn documents, reports, and notes into clean PowerPoint presentations with native text boxes, vector shapes, and editable charts."],
+  ["Grounded Numbers & Charts", "We check numbers against your document and avoid charts and stats we cannot verify, preventing hallucinated figures."],
+  ["Source Citations & Traceability", "Each slide cites its source section and page where available (page numbers are marked approximate when we cannot match them exactly)."],
+  ["Flexible In-App & PPTX Editability", "Edit speaker notes and regenerate individual slides in the web app, then enjoy full formatting and editing freedom in PowerPoint."],
+  ["Regenerate Individual Slides", "Don't regenerate the entire deck when one slide needs work; regenerate single slides with a single click."],
+  ["Privacy-First Data Retention", "Uploaded files and source text are permanently purged after 30 days (or deleted immediately on demand), keeping only file names for citation notes."],
 ];
 
 const plans = [
@@ -46,14 +48,17 @@ const plans = [
 ];
 
 const faqs = [
-  ["Can I edit the slides after export?", "Yes. Every slide is native PowerPoint text and shapes — fully editable in PowerPoint or Keynote."],
+  ["Can I edit the slides in the app and after export?", "Yes. In the web app, you can edit speaker notes, switch templates, reorder outline sections, and regenerate individual slides. Once exported, every slide consists of native PowerPoint text boxes, vector shapes, and editable chart objects — giving you 100% editing freedom in PowerPoint, Keynote, or Google Slides."],
+  ["Are icons included in the PowerPoint export?", "Icons are displayed in the web app preview to enhance visual hierarchy. PPTX exports use clean typography, native card shapes, and structured layouts for universal compatibility across PowerPoint, Keynote, and Google Slides."],
+  ["How are charts and statistics generated?", "We check numbers against your document and avoid charts and stats we cannot verify. If sufficient verified numbers are not present in your text, SlideQuill generates structured content slides rather than inventing figures."],
+  ["How do source citations and document names work?", "SlideQuill retains the original file name and cites source sections and pages in speaker notes (e.g., \"Source: report.pdf, page 12\") and slide footers so claims remain verifiable. Uploaded source files are permanently deleted after 30 days or immediately upon request."],
   ["What templates are available?", "SlideQuill includes 6 professionally designed templates (Modern Minimal, Corporate Executive, Creative Studio, Midnight Pitch, Startup Playful, and Elegant Report) with curated typography and color schemes."],
-  ["What can I upload?", "PDF, DOCX and plain text. YouTube and web links are planned."],
+  ["What can I upload?", "PDF, DOCX and plain text. SlideQuill extracts text and pages to ground claims and charts."],
   ["How many credits does one deck use?", "One credit per deck. A failed generation refunds the credit automatically."],
   ["Can I regenerate individual slides?", "Yes. If one slide isn't right, you can regenerate just that slide without redoing the whole deck."],
   ["What is priority email support?", "50-credit pack customers receive direct priority email assistance (via support@slidequill.in) with a guaranteed response SLA within 24 hours."],
   ["Do credits expire?", "No. Credits never expire — use them whenever you need them."],
-  ["Do you store my uploaded documents?", "Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your source text immediately from the deck editor at any time. We never use your content to train models."],
+  ["Do you store my uploaded documents?", "Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your source text immediately from the deck editor at any time. The original file name is retained as citation metadata in speaker notes and footers so your claims remain verifiable. We never use your content to train models."],
 ];
 
 
@@ -63,9 +68,9 @@ const bar = "shadow-[0_10px_30px_-12px_rgba(16,26,58,.35)]";
 const beforeAfterSlide = {
   id: "hero-sample",
   layout: "chart" as const,
-  title: "Annual Revenue Acceleration Exceeded 190% YoY",
+  title: "ARR Growth from Q1 to Q4",
   notes: "Executive quarterly summary demonstrating ARR expansion.",
-  sourceSection: "Quarterly Financial Analysis",
+  sourceSection: "3.2 Financial & ARR Trajectory",
   sourcePage: 12,
   content: {
     chartType: "bar" as const,

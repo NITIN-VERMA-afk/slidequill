@@ -1,7 +1,14 @@
 import pptxgen from "pptxgenjs";
 import type { SlideData } from "../slides-schema";
+import { buildSourceCitation } from "../slides-schema";
 import { getTheme } from "../themes";
 import { fetchSafeImage } from "../safe-image-fetcher";
+import { stripStashFromSlide } from "../slide-mutations";
+import {
+  calculateFittedFontSize,
+  PPTX_WIDTH_POINTS,
+  PPTX_HEIGHT_POINTS,
+} from "../layout-constants";
 
 const PPTX_SLIDE_WIDTH_INCHES = 13.333;
 
@@ -56,8 +63,10 @@ export async function buildPptx(
   deckTitle: string,
   slides: SlideData[],
   themeId: string,
-  isFreeUser: boolean
+  isFreeUser: boolean,
+  sourceName?: string
 ): Promise<Buffer> {
+  const sanitizedSlides = (slides || []).map(stripStashFromSlide);
   const pptx = new pptxgen();
   pptx.layout = "LAYOUT_WIDE"; // 16:9
 
@@ -80,14 +89,19 @@ export async function buildPptx(
     background: { color: bgColor },
   });
 
-  for (const slide of slides) {
+  for (const slide of sanitizedSlides) {
     const s = pptx.addSlide({ masterName: "MASTER_SLIDE" });
     const c = slide.content as any;
 
-    // Notes
-    if (slide.notes) {
-      s.addNotes(slide.notes);
-    }
+    // Notes: append standardized source reference
+    const sourceCitation = buildSourceCitation(
+      sourceName,
+      slide.sourcePage,
+      slide.sourceSection,
+      slide.sourcePageApprox
+    );
+    const fullNotes = slide.notes ? `${slide.notes}\n\n${sourceCitation}` : sourceCitation;
+    s.addNotes(fullNotes);
 
     // Footer for free users
     if (isFreeUser) {
@@ -103,12 +117,20 @@ export async function buildPptx(
       });
     }
 
-    // Footer: source page citation if available
-    if (slide.sourcePage) {
-      s.addText(`Source: p. ${slide.sourcePage}`, {
+    // Footer: source page citation on content slides (omit on title/closing/full-bleed image to prevent collisions)
+    const isFullBleedImage = slide.layout === "image" && c?.variant === "full_bleed";
+    const canShowCanvasFooter = slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage;
+
+    if (canShowCanvasFooter && slide.sourcePage) {
+      const rawPageStr = String(slide.sourcePage).trim();
+      const isApprox = Boolean(slide.sourcePageApprox || /\(approx\.?\)/i.test(rawPageStr));
+      const cleanPage = rawPageStr.replace(/\s*\((?:approx|approx\.)\)/gi, "").trim();
+      const pLabel = cleanPage.includes("-") ? "pp." : "p.";
+      const approxSuffix = isApprox ? " (approx.)" : "";
+      s.addText(`Source: ${pLabel} ${cleanPage}${approxSuffix}`, {
         x: isFreeUser ? "32%" : "5%",
         y: "95%",
-        w: "25%",
+        w: "30%",
         h: "4%",
         fontSize: 9,
         color: mutedColor,
@@ -160,7 +182,14 @@ export async function buildPptx(
           y: "35%",
           w: "84%",
           h: "20%",
-          fontSize: 44,
+          fontSize: calculateFittedFontSize(
+            slide.title,
+            PPTX_WIDTH_POINTS * 0.84,
+            PPTX_HEIGHT_POINTS * 0.2,
+            44,
+            26,
+            headingFont
+          ),
           bold: true,
           color: "ffffff",
           align: "left",
@@ -173,7 +202,14 @@ export async function buildPptx(
             y: "55%",
             w: "84%",
             h: "15%",
-            fontSize: 24,
+            fontSize: calculateFittedFontSize(
+              c.subtitle,
+              PPTX_WIDTH_POINTS * 0.84,
+              PPTX_HEIGHT_POINTS * 0.15,
+              24,
+              16,
+              bodyFont
+            ),
             color: "e2e8f0",
             align: "left",
             fontFace: bodyFont,
@@ -195,7 +231,14 @@ export async function buildPptx(
           y: "30%",
           w: "40%",
           h: "25%",
-          fontSize: 38,
+          fontSize: calculateFittedFontSize(
+            slide.title,
+            PPTX_WIDTH_POINTS * 0.4,
+            PPTX_HEIGHT_POINTS * 0.25,
+            38,
+            22,
+            headingFont
+          ),
           bold: true,
           color: headingColor,
           align: "left",
@@ -208,7 +251,14 @@ export async function buildPptx(
             y: "55%",
             w: "40%",
             h: "18%",
-            fontSize: 22,
+            fontSize: calculateFittedFontSize(
+              c.subtitle,
+              PPTX_WIDTH_POINTS * 0.4,
+              PPTX_HEIGHT_POINTS * 0.18,
+              22,
+              14,
+              bodyFont
+            ),
             color: mutedColor,
             align: "left",
             fontFace: bodyFont,
@@ -229,7 +279,14 @@ export async function buildPptx(
           y: "35%",
           w: "80%",
           h: "20%",
-          fontSize: 44,
+          fontSize: calculateFittedFontSize(
+            slide.title,
+            PPTX_WIDTH_POINTS * 0.8,
+            PPTX_HEIGHT_POINTS * 0.2,
+            44,
+            26,
+            headingFont
+          ),
           bold: true,
           color: headingColor,
           align: "center",
@@ -242,7 +299,14 @@ export async function buildPptx(
             y: "55%",
             w: "80%",
             h: "10%",
-            fontSize: 24,
+            fontSize: calculateFittedFontSize(
+              c.subtitle,
+              PPTX_WIDTH_POINTS * 0.8,
+              PPTX_HEIGHT_POINTS * 0.1,
+              24,
+              16,
+              bodyFont
+            ),
             color: mutedColor,
             align: "center",
             fontFace: bodyFont,
@@ -290,7 +354,14 @@ export async function buildPptx(
           y: "35%",
           w: "80%",
           h: "20%",
-          fontSize: 40,
+          fontSize: calculateFittedFontSize(
+            headlineText,
+            PPTX_WIDTH_POINTS * 0.8,
+            PPTX_HEIGHT_POINTS * 0.2,
+            40,
+            24,
+            headingFont
+          ),
           bold: true,
           align: "center",
           color: "ffffff",
@@ -303,7 +374,14 @@ export async function buildPptx(
             y: "60%",
             w: "80%",
             h: "10%",
-            fontSize: 24,
+            fontSize: calculateFittedFontSize(
+              c.cta,
+              PPTX_WIDTH_POINTS * 0.8,
+              PPTX_HEIGHT_POINTS * 0.1,
+              24,
+              16,
+              bodyFont
+            ),
             align: "center",
             color: accentColor,
             fontFace: bodyFont,
@@ -316,7 +394,14 @@ export async function buildPptx(
           y: "30%",
           w: "44%",
           h: "25%",
-          fontSize: 36,
+          fontSize: calculateFittedFontSize(
+            headlineText,
+            PPTX_WIDTH_POINTS * 0.44,
+            PPTX_HEIGHT_POINTS * 0.25,
+            36,
+            22,
+            headingFont
+          ),
           bold: true,
           align: "left",
           color: headingColor,
@@ -329,7 +414,14 @@ export async function buildPptx(
             y: "58%",
             w: "44%",
             h: "10%",
-            fontSize: 22,
+            fontSize: calculateFittedFontSize(
+              c.cta,
+              PPTX_WIDTH_POINTS * 0.44,
+              PPTX_HEIGHT_POINTS * 0.1,
+              22,
+              15,
+              bodyFont
+            ),
             align: "left",
             color: accentColor,
             fontFace: bodyFont,
@@ -350,7 +442,14 @@ export async function buildPptx(
           y: "35%",
           w: "80%",
           h: "20%",
-          fontSize: 40,
+          fontSize: calculateFittedFontSize(
+            headlineText,
+            PPTX_WIDTH_POINTS * 0.8,
+            PPTX_HEIGHT_POINTS * 0.2,
+            40,
+            24,
+            headingFont
+          ),
           bold: true,
           align: "center",
           color: headingColor,
@@ -363,7 +462,14 @@ export async function buildPptx(
             y: "60%",
             w: "80%",
             h: "10%",
-            fontSize: 24,
+            fontSize: calculateFittedFontSize(
+              c.cta,
+              PPTX_WIDTH_POINTS * 0.8,
+              PPTX_HEIGHT_POINTS * 0.1,
+              24,
+              16,
+              bodyFont
+            ),
             align: "center",
             color: accentColor,
             fontFace: bodyFont,
@@ -378,7 +484,14 @@ export async function buildPptx(
         y: "5%",
         w: "90%",
         h: "15%",
-        fontSize: 32,
+        fontSize: calculateFittedFontSize(
+          slide.title,
+          PPTX_WIDTH_POINTS * 0.9,
+          PPTX_HEIGHT_POINTS * 0.15,
+          32,
+          20,
+          headingFont
+        ),
         bold: true,
         color: headingColor,
         fontFace: headingFont,
@@ -391,6 +504,15 @@ export async function buildPptx(
           if (c?.imageUrl) {
             // Cap at 4 bullets beside photo, increase font, give text ~55% width
             const displayBullets = (c.bullets as string[]).slice(0, 4);
+            const bulletsText = displayBullets.join("\n");
+            const fontSize = calculateFittedFontSize(
+              bulletsText,
+              PPTX_WIDTH_POINTS * 0.55,
+              PPTX_HEIGHT_POINTS * 0.7,
+              24,
+              12,
+              bodyFont
+            );
             s.addText(
               displayBullets.map((b: string) => ({
                 text: b,
@@ -401,7 +523,7 @@ export async function buildPptx(
                 y: "22%",
                 w: "55%",
                 h: "70%",
-                fontSize: 24,
+                fontSize,
                 color: bodyColor,
                 fontFace: bodyFont,
                 valign: "top",
@@ -417,8 +539,18 @@ export async function buildPptx(
               mutedColor
             );
           } else {
+            const displayBullets = (c.bullets as string[]).slice(0, 6);
+            const bulletsText = displayBullets.join("\n");
+            const fontSize = calculateFittedFontSize(
+              bulletsText,
+              PPTX_WIDTH_POINTS * 0.9,
+              PPTX_HEIGHT_POINTS * 0.7,
+              24,
+              12,
+              bodyFont
+            );
             s.addText(
-              c.bullets.map((b: string) => ({
+              displayBullets.map((b: string) => ({
                 text: b,
                 options: { bullet: true },
               })),
@@ -427,7 +559,7 @@ export async function buildPptx(
                 y: "22%",
                 w: "90%",
                 h: "70%",
-                fontSize: 24,
+                fontSize,
                 color: bodyColor,
                 fontFace: bodyFont,
                 valign: "top",
@@ -437,91 +569,103 @@ export async function buildPptx(
           }
         }
       } else if (slide.layout === "two_column") {
+        const renderColumn = (
+          colData: any,
+          x: any,
+          y: any,
+          w: any,
+          h: any,
+          isWithImage: boolean
+        ) => {
+          const runs: any[] = [];
+          const headingFontSize = isWithImage ? 20 : 24;
+          const minHeadingFontSize = isWithImage ? 16 : 18;
+          const fittedHeadingSize = colData?.heading
+            ? calculateFittedFontSize(
+                String(colData.heading),
+                PPTX_WIDTH_POINTS * (isWithImage ? 0.27 : 0.42),
+                PPTX_HEIGHT_POINTS * 0.15,
+                headingFontSize,
+                minHeadingFontSize,
+                headingFont
+              )
+            : headingFontSize;
+
+          const baseBulletFontSize = isWithImage ? 16 : 20;
+          const minBulletFontSize = isWithImage ? 12 : 14;
+          const bulletsText = Array.isArray(colData?.bullets) ? colData.bullets.join("\n") : "";
+          const fittedBulletSize = bulletsText
+            ? calculateFittedFontSize(
+                bulletsText,
+                PPTX_WIDTH_POINTS * (isWithImage ? 0.27 : 0.42),
+                PPTX_HEIGHT_POINTS * 0.5,
+                baseBulletFontSize,
+                minBulletFontSize,
+                bodyFont
+              )
+            : baseBulletFontSize;
+
+          if (colData?.heading) {
+            runs.push({
+              text: String(colData.heading),
+              options: {
+                fontSize: fittedHeadingSize,
+                bold: true,
+                color: headingColor,
+                fontFace: headingFont,
+                breakLine: true,
+                paraSpaceAfter: 10,
+              },
+            });
+          }
+          if (Array.isArray(colData?.bullets)) {
+            colData.bullets.forEach((b: string, idx: number) => {
+              runs.push({
+                text: String(b),
+                options: {
+                  fontSize: fittedBulletSize,
+                  color: bodyColor,
+                  fontFace: bodyFont,
+                  bullet: true,
+                  breakLine: idx < colData.bullets.length - 1,
+                  paraSpaceAfter: 6,
+                },
+              });
+            });
+          }
+
+          if (runs.length > 0) {
+            s.addText(runs, {
+              x,
+              y,
+              w,
+              h,
+              shape: cardShape.shapeType,
+              fill: { color: surfaceColor },
+              line: { type: "none" },
+              ...cardShape.radiusProps,
+              valign: "top",
+              margin: [16, 18, 16, 18],
+              shrinkText: true,
+            });
+          } else {
+            s.addShape(cardShape.shapeType, {
+              x,
+              y,
+              w,
+              h,
+              fill: { color: surfaceColor },
+              line: { type: "none" },
+              ...cardShape.radiusProps,
+            });
+          }
+        };
+
         if (c?.imageUrl) {
           // Left card
-          s.addShape(cardShape.shapeType, {
-            x: "5%",
-            y: "22%",
-            w: "27%",
-            h: "66%",
-            fill: { color: surfaceColor },
-            line: { type: "none" },
-            ...cardShape.radiusProps,
-          });
-          if (c?.left?.heading) {
-            s.addText(c.left.heading, {
-              x: "6%",
-              y: "24%",
-              w: "25%",
-              h: "10%",
-              fontSize: 20,
-              bold: true,
-              color: headingColor,
-              fontFace: headingFont,
-              shrinkText: true,
-            });
-          }
-          if (c?.left?.bullets) {
-            s.addText(
-              c.left.bullets.map((b: string) => ({
-                text: b,
-                options: { bullet: true },
-              })),
-              {
-                x: "6%",
-                y: "34%",
-                w: "25%",
-                h: "52%",
-                fontSize: 16,
-                color: bodyColor,
-                fontFace: bodyFont,
-                valign: "top",
-                shrinkText: true,
-              }
-            );
-          }
+          renderColumn(c?.left, "5%", "22%", "27%", "66%", true);
           // Right card
-          s.addShape(cardShape.shapeType, {
-            x: "34%",
-            y: "22%",
-            w: "27%",
-            h: "66%",
-            fill: { color: surfaceColor },
-            line: { type: "none" },
-            ...cardShape.radiusProps,
-          });
-          if (c?.right?.heading) {
-            s.addText(c.right.heading, {
-              x: "35%",
-              y: "24%",
-              w: "25%",
-              h: "10%",
-              fontSize: 20,
-              bold: true,
-              color: headingColor,
-              fontFace: headingFont,
-              shrinkText: true,
-            });
-          }
-          if (c?.right?.bullets) {
-            s.addText(
-              c.right.bullets.map((b: string) => ({
-                text: b,
-                options: { bullet: true },
-              })),
-              {
-                x: "35%",
-                y: "34%",
-                w: "25%",
-                h: "52%",
-                fontSize: 16,
-                color: bodyColor,
-                fontFace: bodyFont,
-                valign: "top",
-                shrinkText: true,
-              }
-            );
-          }
+          renderColumn(c?.right, "34%", "22%", "27%", "66%", true);
           await addSlideImage(
             s,
             c.imageUrl,
@@ -532,89 +676,9 @@ export async function buildPptx(
           );
         } else {
           // Left card
-          s.addShape(cardShape.shapeType, {
-            x: "5%",
-            y: "22%",
-            w: "42%",
-            h: "66%",
-            fill: { color: surfaceColor },
-            line: { type: "none" },
-            ...cardShape.radiusProps,
-          });
-          if (c?.left?.heading) {
-            s.addText(c.left.heading, {
-              x: "6%",
-              y: "24%",
-              w: "40%",
-              h: "10%",
-              fontSize: 24,
-              bold: true,
-              color: headingColor,
-              fontFace: headingFont,
-              shrinkText: true,
-            });
-          }
-          if (c?.left?.bullets) {
-            s.addText(
-              c.left.bullets.map((b: string) => ({
-                text: b,
-                options: { bullet: true },
-              })),
-              {
-                x: "6%",
-                y: "34%",
-                w: "40%",
-                h: "52%",
-                fontSize: 20,
-                color: bodyColor,
-                fontFace: bodyFont,
-                valign: "top",
-                shrinkText: true,
-              }
-            );
-          }
+          renderColumn(c?.left, "5%", "22%", "42%", "66%", false);
           // Right card
-          s.addShape(cardShape.shapeType, {
-            x: "53%",
-            y: "22%",
-            w: "42%",
-            h: "66%",
-            fill: { color: surfaceColor },
-            line: { type: "none" },
-            ...cardShape.radiusProps,
-          });
-          if (c?.right?.heading) {
-            s.addText(c.right.heading, {
-              x: "54%",
-              y: "24%",
-              w: "40%",
-              h: "10%",
-              fontSize: 24,
-              bold: true,
-              color: headingColor,
-              fontFace: headingFont,
-              shrinkText: true,
-            });
-          }
-          if (c?.right?.bullets) {
-            s.addText(
-              c.right.bullets.map((b: string) => ({
-                text: b,
-                options: { bullet: true },
-              })),
-              {
-                x: "54%",
-                y: "34%",
-                w: "40%",
-                h: "52%",
-                fontSize: 20,
-                color: bodyColor,
-                fontFace: bodyFont,
-                valign: "top",
-                shrinkText: true,
-              }
-            );
-          }
+          renderColumn(c?.right, "53%", "22%", "42%", "66%", false);
         }
       } else if (slide.layout === "stats") {
         if (c?.stats) {
@@ -624,38 +688,72 @@ export async function buildPptx(
           const cardW = (totalW - (count - 1) * gap) / count;
           c.stats.forEach((stat: any, i: number) => {
             const cardX = 5 + i * (cardW + gap);
-            s.addShape(cardShape.shapeType, {
-              x: `${cardX}%`,
-              y: "22%",
-              w: `${cardW}%`,
-              h: "66%",
-              fill: { color: surfaceColor },
-              line: { type: "none" },
-              ...cardShape.radiusProps,
-            });
-            s.addText(stat.value, {
-              x: `${cardX}%`,
-              y: "30%",
-              w: `${cardW}%`,
-              h: "20%",
-              fontSize: 48,
-              bold: true,
-              align: "center",
-              color: accentColor,
-              fontFace: headingFont,
-              shrinkText: true,
-            });
-            s.addText(stat.label, {
-              x: `${cardX}%`,
-              y: "50%",
-              w: `${cardW}%`,
-              h: "20%",
-              fontSize: 20,
-              align: "center",
-              color: mutedColor,
-              fontFace: bodyFont,
-              shrinkText: true,
-            });
+            const runs: any[] = [];
+            const fittedValSize = calculateFittedFontSize(
+              String(stat.value || ""),
+              PPTX_WIDTH_POINTS * (cardW / 100),
+              PPTX_HEIGHT_POINTS * 0.25,
+              48,
+              26,
+              headingFont
+            );
+            const fittedLblSize = calculateFittedFontSize(
+              String(stat.label || ""),
+              PPTX_WIDTH_POINTS * (cardW / 100),
+              PPTX_HEIGHT_POINTS * 0.2,
+              20,
+              13,
+              bodyFont
+            );
+            if (stat.value !== undefined && stat.value !== null && stat.value !== "") {
+              runs.push({
+                text: String(stat.value),
+                options: {
+                  fontSize: fittedValSize,
+                  bold: true,
+                  color: accentColor,
+                  fontFace: headingFont,
+                  breakLine: true,
+                  paraSpaceAfter: 8,
+                },
+              });
+            }
+            if (stat.label !== undefined && stat.label !== null && stat.label !== "") {
+              runs.push({
+                text: String(stat.label),
+                options: {
+                  fontSize: fittedLblSize,
+                  color: mutedColor,
+                  fontFace: bodyFont,
+                },
+              });
+            }
+
+            if (runs.length > 0) {
+              s.addText(runs, {
+                x: `${cardX}%`,
+                y: "22%",
+                w: `${cardW}%`,
+                h: "66%",
+                shape: cardShape.shapeType,
+                fill: { color: surfaceColor },
+                line: { type: "none" },
+                ...cardShape.radiusProps,
+                align: "center",
+                valign: "middle",
+                shrinkText: true,
+              });
+            } else {
+              s.addShape(cardShape.shapeType, {
+                x: `${cardX}%`,
+                y: "22%",
+                w: `${cardW}%`,
+                h: "66%",
+                fill: { color: surfaceColor },
+                line: { type: "none" },
+                ...cardShape.radiusProps,
+              });
+            }
           });
         }
       } else if (slide.layout === "process") {
@@ -663,6 +761,22 @@ export async function buildPptx(
           const count = c.steps.length;
           const width = 90 / count;
           c.steps.forEach((step: any, i: number) => {
+            const fittedLabelSize = calculateFittedFontSize(
+              String(step.label || ""),
+              PPTX_WIDTH_POINTS * (width / 100),
+              PPTX_HEIGHT_POINTS * 0.15,
+              24,
+              14,
+              headingFont
+            );
+            const fittedDescSize = calculateFittedFontSize(
+              String(step.desc || ""),
+              PPTX_WIDTH_POINTS * (width / 100),
+              PPTX_HEIGHT_POINTS * 0.3,
+              18,
+              12,
+              bodyFont
+            );
             s.addText(`${i + 1}`, {
               x: `${5 + i * width}%`,
               y: "30%",
@@ -680,7 +794,7 @@ export async function buildPptx(
               y: "45%",
               w: `${width}%`,
               h: "15%",
-              fontSize: 24,
+              fontSize: fittedLabelSize,
               bold: true,
               align: "center",
               color: headingColor,
@@ -692,7 +806,7 @@ export async function buildPptx(
               y: "60%",
               w: `${width}%`,
               h: "30%",
-              fontSize: 18,
+              fontSize: fittedDescSize,
               align: "center",
               color: mutedColor,
               fontFace: bodyFont,
@@ -705,18 +819,35 @@ export async function buildPptx(
           const count = c.columns.length;
           const width = 90 / count;
           c.columns.forEach((col: any, i: number) => {
+            const fittedHeadingSize = calculateFittedFontSize(
+              String(col.heading || ""),
+              PPTX_WIDTH_POINTS * (width / 100),
+              PPTX_HEIGHT_POINTS * 0.1,
+              24,
+              16,
+              headingFont
+            );
             s.addText(col.heading, {
               x: `${5 + i * width}%`,
               y: "22%",
               w: `${width}%`,
               h: "10%",
-              fontSize: 24,
+              fontSize: fittedHeadingSize,
               bold: true,
               color: headingColor,
               fontFace: headingFont,
               shrinkText: true,
             });
             if (col.bullets) {
+              const bulletsText = Array.isArray(col.bullets) ? col.bullets.join("\n") : "";
+              const fittedBulletSize = calculateFittedFontSize(
+                bulletsText,
+                PPTX_WIDTH_POINTS * (width / 100),
+                PPTX_HEIGHT_POINTS * 0.6,
+                20,
+                13,
+                bodyFont
+              );
               s.addText(
                 col.bullets.map((b: string) => ({
                   text: b,
@@ -727,7 +858,7 @@ export async function buildPptx(
                   y: "32%",
                   w: `${width}%`,
                   h: "60%",
-                  fontSize: 20,
+                  fontSize: fittedBulletSize,
                   color: bodyColor,
                   fontFace: bodyFont,
                   valign: "top",
@@ -740,10 +871,10 @@ export async function buildPptx(
       } else if (slide.layout === "quote") {
         const quoteText = c?.quote ? `"${c.quote}"` : `"${slide.title}"`;
         const hasBgImage = Boolean(
-          c?.imageUrl && c?.imagePlacement === "background"
+          c?.imageUrl && (c?.imagePlacement === "background" || !c?.imagePlacement)
         );
         const hasRightImage = Boolean(
-          c?.imageUrl && c?.imagePlacement !== "background"
+          c?.imageUrl && c?.imagePlacement === "right"
         );
 
         if (hasBgImage) {
@@ -771,12 +902,20 @@ export async function buildPptx(
             fill: { color: "000000", transparency: 45 },
             line: { type: "none" },
           });
+          const fittedQuoteSize = calculateFittedFontSize(
+            quoteText,
+            PPTX_WIDTH_POINTS * 0.8,
+            PPTX_HEIGHT_POINTS * 0.4,
+            32,
+            18,
+            headingFont
+          );
           s.addText(quoteText, {
             x: "10%",
             y: "30%",
             w: "80%",
             h: "40%",
-            fontSize: 32,
+            fontSize: fittedQuoteSize,
             italic: true,
             align: "center",
             color: "ffffff",
@@ -784,12 +923,20 @@ export async function buildPptx(
             shrinkText: true,
           });
           if (c?.attribution) {
+            const fittedAttribSize = calculateFittedFontSize(
+              `— ${c.attribution}`,
+              PPTX_WIDTH_POINTS * 0.8,
+              PPTX_HEIGHT_POINTS * 0.1,
+              20,
+              14,
+              bodyFont
+            );
             s.addText(`— ${c.attribution}`, {
               x: "10%",
               y: "70%",
               w: "80%",
               h: "10%",
-              fontSize: 20,
+              fontSize: fittedAttribSize,
               bold: true,
               align: "center",
               color: "cbd5e1",
@@ -798,12 +945,20 @@ export async function buildPptx(
             });
           }
         } else if (hasRightImage) {
+          const fittedQuoteSize = calculateFittedFontSize(
+            quoteText,
+            PPTX_WIDTH_POINTS * 0.48,
+            PPTX_HEIGHT_POINTS * 0.45,
+            28,
+            18,
+            headingFont
+          );
           s.addText(quoteText, {
             x: "6%",
             y: "25%",
             w: "48%",
             h: "45%",
-            fontSize: 28,
+            fontSize: fittedQuoteSize,
             italic: true,
             align: "left",
             color: bodyColor,
@@ -811,12 +966,20 @@ export async function buildPptx(
             shrinkText: true,
           });
           if (c?.attribution) {
+            const fittedAttribSize = calculateFittedFontSize(
+              `— ${c.attribution}`,
+              PPTX_WIDTH_POINTS * 0.48,
+              PPTX_HEIGHT_POINTS * 0.1,
+              18,
+              13,
+              bodyFont
+            );
             s.addText(`— ${c.attribution}`, {
               x: "6%",
               y: "70%",
               w: "48%",
               h: "10%",
-              fontSize: 18,
+              fontSize: fittedAttribSize,
               bold: true,
               align: "left",
               color: mutedColor,
@@ -833,12 +996,20 @@ export async function buildPptx(
             mutedColor
           );
         } else {
+          const fittedQuoteSize = calculateFittedFontSize(
+            quoteText,
+            PPTX_WIDTH_POINTS * 0.8,
+            PPTX_HEIGHT_POINTS * 0.4,
+            32,
+            18,
+            headingFont
+          );
           s.addText(quoteText, {
             x: "10%",
             y: "30%",
             w: "80%",
             h: "40%",
-            fontSize: 32,
+            fontSize: fittedQuoteSize,
             italic: true,
             align: "center",
             color: bodyColor,
@@ -846,12 +1017,20 @@ export async function buildPptx(
             shrinkText: true,
           });
           if (c?.attribution) {
+            const fittedAttribSize = calculateFittedFontSize(
+              `— ${c.attribution}`,
+              PPTX_WIDTH_POINTS * 0.8,
+              PPTX_HEIGHT_POINTS * 0.1,
+              20,
+              14,
+              bodyFont
+            );
             s.addText(`— ${c.attribution}`, {
               x: "10%",
               y: "70%",
               w: "80%",
               h: "10%",
-              fontSize: 20,
+              fontSize: fittedAttribSize,
               bold: true,
               align: "center",
               color: mutedColor,
@@ -965,6 +1144,162 @@ export async function buildPptx(
               italic: true,
               color: bodyColor,
               fontFace: bodyFont,
+              shrinkText: true,
+            });
+          }
+        }
+      } else if (slide.layout === "chart") {
+        const hasValidCategories =
+          Array.isArray(c?.categories) && c.categories.length >= 2;
+        const hasValidSeries =
+          Array.isArray(c?.series) &&
+          c.series.length > 0 &&
+          c.series.some(
+            (ser: any) =>
+              Array.isArray(ser?.values) &&
+              ser.values.length > 0 &&
+              ser.values.some((v: any) => typeof v === "number" && !isNaN(v))
+          );
+
+        if (!hasValidCategories || !hasValidSeries) {
+          // Fallback to bullets-style slide instead of an empty slide
+          const fallbackBullets: string[] = [];
+          if (Array.isArray(c?.bullets) && c.bullets.length > 0) {
+            fallbackBullets.push(
+              ...c.bullets.filter((b: any) => typeof b === "string" && b.trim().length > 0)
+            );
+          }
+          if (fallbackBullets.length === 0 && c?.caption) {
+            fallbackBullets.push(c.caption);
+          }
+          if (fallbackBullets.length === 0 && slide.notes) {
+            fallbackBullets.push(slide.notes);
+          }
+          if (fallbackBullets.length === 0 && Array.isArray(c?.points) && c.points.length > 0) {
+            fallbackBullets.push(
+              ...c.points.filter((p: any) => typeof p === "string" && p.trim().length > 0)
+            );
+          }
+          if (fallbackBullets.length === 0 && slide.title) {
+            fallbackBullets.push(slide.title);
+          }
+
+          s.addText(
+            fallbackBullets.map((b: string) => ({
+              text: b,
+              options: { bullet: true },
+            })),
+            {
+              x: "5%",
+              y: "22%",
+              w: "90%",
+              h: "70%",
+              fontSize: 24,
+              color: bodyColor,
+              fontFace: bodyFont,
+              valign: "top",
+              shrinkText: true,
+            }
+          );
+        } else {
+          // Determine PPTX Chart Type
+          const rawType = String(c.chartType || "bar").toLowerCase();
+          let chartType = pptx.ChartType.bar;
+          if (rawType === "line") {
+            chartType = pptx.ChartType.line;
+          } else if (rawType === "pie") {
+            chartType = pptx.ChartType.pie;
+          }
+
+          const categories: string[] = c.categories.map((cat: any) => String(cat ?? ""));
+
+          // Build series data
+          const chartData = (c.series as Array<{ name?: string; values?: number[] }>).map(
+            (ser, sIdx) => ({
+              name: ser.name || `Series ${sIdx + 1}`,
+              labels: categories,
+              values: (ser.values || []).map((v) => (typeof v === "number" && !isNaN(v) ? v : 0)),
+            })
+          );
+
+          // Curated palette aligned with theme accent
+          const chartColors = [
+            accentColor,
+            accent2Color,
+            "10b981", // emerald
+            "f59e0b", // amber
+            "8b5cf6", // violet
+            "ec4899", // pink
+            "06b6d4", // cyan
+            "64748b", // slate
+          ];
+
+          const hasCaption = Boolean(c?.caption);
+          const chartH = hasCaption ? "64%" : "72%";
+
+          // Native Chart Options
+          const chartOpts: any = {
+            x: "5%",
+            y: "20%",
+            w: "90%",
+            h: chartH,
+            chartColors,
+            showLegend: chartType === pptx.ChartType.pie || chartData.length > 1,
+            legendPos: "b",
+            legendFontFace: bodyFont,
+            legendColor: mutedColor,
+            legendFontSize: 11,
+          };
+
+          if (chartType === pptx.ChartType.bar) {
+            chartOpts.barDir = "col";
+            chartOpts.barGrouping = "clustered";
+            chartOpts.catAxisLabelColor = mutedColor;
+            chartOpts.valAxisLabelColor = mutedColor;
+            chartOpts.catAxisLabelFontFace = bodyFont;
+            chartOpts.valAxisLabelFontFace = bodyFont;
+            chartOpts.catAxisLabelFontSize = 10;
+            chartOpts.valAxisLabelFontSize = 10;
+            chartOpts.valGridLine = {
+              style: "dash",
+              color: surfaceColor === "ffffff" ? "e2e8f0" : surfaceColor,
+            };
+            chartOpts.catGridLine = { style: "none" };
+          } else if (chartType === pptx.ChartType.line) {
+            chartOpts.lineDataSymbol = "circle";
+            chartOpts.lineDataSymbolSize = 6;
+            chartOpts.catAxisLabelColor = mutedColor;
+            chartOpts.valAxisLabelColor = mutedColor;
+            chartOpts.catAxisLabelFontFace = bodyFont;
+            chartOpts.valAxisLabelFontFace = bodyFont;
+            chartOpts.catAxisLabelFontSize = 10;
+            chartOpts.valAxisLabelFontSize = 10;
+            chartOpts.valGridLine = {
+              style: "dash",
+              color: surfaceColor === "ffffff" ? "e2e8f0" : surfaceColor,
+            };
+            chartOpts.catGridLine = { style: "none" };
+          } else if (chartType === pptx.ChartType.pie) {
+            chartOpts.showPercent = true;
+            chartOpts.dataLabelColor = "ffffff";
+            chartOpts.dataLabelFontFace = bodyFont;
+            chartOpts.dataLabelFontSize = 11;
+          }
+
+          s.addChart(chartType, chartData, chartOpts);
+
+          if (hasCaption) {
+            s.addText(c.caption, {
+              x: "5%",
+              y: "86%",
+              w: "90%",
+              h: "8%",
+              fontSize: 15,
+              italic: true,
+              color: mutedColor,
+              fontFace: bodyFont,
+              align: "center",
+              valign: "middle",
               shrinkText: true,
             });
           }

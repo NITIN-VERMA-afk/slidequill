@@ -22,8 +22,12 @@ import {
   summarizeChunkWithRetry,
   reduceNotesToOutline,
   calculateTargetSectionCount,
+  computeDeterministicSectionPageRanges,
 } from "@/lib/longdoc";
 import { executeAtomicRefund } from "../generate/route";
+import { getOutlineMinuteLimiter, getOutlineDailyLimiter } from "@/lib/ratelimit";
+import { checkOrigin } from "@/lib/csrf";
+import { isValidObjectId } from "@/lib/validation";
 
 export const maxDuration = 60;
 
@@ -85,6 +89,9 @@ export async function processOutlineStep(
   userId: string,
   body: { regenerate?: boolean } = {}
 ): Promise<{ status: number; data: any }> {
+  if (!isValidObjectId(id)) {
+    return { status: 400, data: { error: "Invalid deck ID." } };
+  }
   await connectDB();
 
   // Ownership check — include sourceText and chunkNotes
@@ -176,12 +183,17 @@ export async function processOutlineStep(
         throw new Error("OpenAI response did not match expected outline schema.");
       }
 
-      deck.outline = validated.data.sections.map((s) => ({
+      const rawSections = validated.data.sections.map((s) => ({
         id: randomUUID(),
         title: s.title,
         points: s.points,
-        pageRange: s.pageRange,
       }));
+
+      deck.outline = computeDeterministicSectionPageRanges(
+        rawSections,
+        deck.sourceText,
+        deck.sourcePageCount
+      );
       deck.status = "outlined";
       deck.outlineProgress = undefined;
 
@@ -277,6 +289,8 @@ export async function processOutlineStep(
           },
           $set: {
             chunkLease: null,
+            lastProgressAt: new Date(),
+            updatedAt: new Date(),
           },
           $inc: {
             "tokenUsage.outlinePromptTokens": usage.promptTokens,
@@ -300,12 +314,15 @@ export async function processOutlineStep(
           currentPageRange: remainingChunk ? `${remainingChunk.startPage}–${remainingChunk.endPage}` : "",
         };
 
+        const now = new Date();
         await Deck.updateOne(
           { _id: id, userId },
           {
             $set: {
               outlineProgress: progress,
               status: "outlining",
+              lastProgressAt: now,
+              updatedAt: now,
             },
           }
         );
@@ -366,6 +383,7 @@ export async function processOutlineStep(
     claimedReduce.status = "outlined";
     claimedReduce.outlineProgress = undefined;
     claimedReduce.chunkLease = null;
+    claimedReduce.lastProgressAt = new Date();
 
     if (reduced.usage) {
       claimedReduce.tokenUsage = {
@@ -413,12 +431,38 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session?.sub) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  try {
+    const minLimit = await getOutlineMinuteLimiter().limit(session.sub);
+    if (!minLimit.success) {
+      return NextResponse.json(
+        { error: "Too many outline requests. Please wait a minute." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
+    const dayLimit = await getOutlineDailyLimiter().limit(session.sub);
+    if (!dayLimit.success) {
+      return NextResponse.json(
+        { error: "Daily outline generation limit reached. Please try again tomorrow." },
+        { status: 429, headers: { "Retry-After": "86400" } }
+      );
+    }
+  } catch {
+    // If ratelimiter is unavailable, do not block
+  }
+
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
   let body: { regenerate?: boolean } = {};
   try {
     body = await req.json();

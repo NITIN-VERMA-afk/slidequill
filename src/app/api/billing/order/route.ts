@@ -6,9 +6,13 @@ import { getSession } from "@/lib/auth";
 import { getBillingLimiter } from "@/lib/ratelimit";
 import { PLANS } from "@/lib/plans";
 import { trackEvent } from "@/lib/analytics";
+import { checkOrigin } from "@/lib/csrf";
 
 
 export async function POST(req: NextRequest) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session?.sub) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });

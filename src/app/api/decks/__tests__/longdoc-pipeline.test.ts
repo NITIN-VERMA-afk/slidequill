@@ -145,6 +145,7 @@ describe("Long Document Pipeline Lifecycle, Retention & Safety", () => {
       title: "Crashed MidMap Deck",
       status: "outlining",
       creditCharged: true,
+      creditDeductedAt: new Date(),
       creditRefunded: false,
     });
 

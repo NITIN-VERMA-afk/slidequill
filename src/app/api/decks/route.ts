@@ -11,6 +11,7 @@ import { getSession } from "@/lib/auth";
 import { extractText } from "@/lib/extract";
 import { getDeckLimiter } from "@/lib/ratelimit";
 import { trackEvent } from "@/lib/analytics";
+import { checkOrigin } from "@/lib/csrf";
 
 import { themes, defaultThemeId } from "@/lib/themes";
 
@@ -37,6 +38,9 @@ function sanitiseName(name: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   // Auth
   const session = await getSession();
   if (!session?.sub) {

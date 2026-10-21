@@ -1,5 +1,12 @@
 import { Schema, model, models, type Document, type Types } from "mongoose";
 
+export interface ICreditDeduction {
+  deductionId: string;
+  deckId: Types.ObjectId;
+  deductedAt: Date;
+  refunded: boolean;
+}
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   email: string;
@@ -11,6 +18,7 @@ export interface IUser extends Document {
   credits: number;
   hasPurchased: boolean;
   emailVerified: boolean;
+  creditDeductions?: ICreditDeduction[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +40,14 @@ const UserSchema = new Schema<IUser>(
     credits: { type: Number, default: 3 },
     hasPurchased: { type: Boolean, default: false },
     emailVerified: { type: Boolean, default: false },
+    creditDeductions: [
+      {
+        deductionId: { type: String, required: true },
+        deckId: { type: Schema.Types.ObjectId, ref: "Deck", required: true },
+        deductedAt: { type: Date, default: Date.now },
+        refunded: { type: Boolean, default: false },
+      },
+    ],
   },
   { timestamps: true }
 );

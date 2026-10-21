@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { connectDB } from "@/app/lib/db";
 import Deck from "@/app/models/Deck";
+import DeckVersion from "@/app/models/DeckVersion";
 import User from "@/app/models/User";
 import { getSession } from "@/lib/auth";
 import { openai } from "@/lib/openai";
@@ -10,6 +11,7 @@ import {
   SlideSchema,
   sanitizeSlidePayload,
   buildFallbackBulletsSlide,
+  formatSourcePage,
   validateAndSanitizeSourcePage,
   groundAndSanitizeSlide,
   type SlideData,
@@ -18,8 +20,10 @@ import type { OutlineSection } from "@/app/models/Deck";
 import { searchStockImage, validateAndCleanImageQuery, isDataHeavyBulletList } from "@/lib/image-search";
 import { getUserGenerationLimiter } from "@/lib/ratelimit";
 import { trackEvent, sanitizeAnalyticsErrorMessage } from "@/lib/analytics";
-import { getSourceExcerptForSection } from "@/lib/longdoc";
+import { getSourceExcerptForSection, getRelevantChunkNotesExcerpt } from "@/lib/longdoc";
 import { planDeckLayouts, type SlideLayoutType } from "@/lib/layout-planner";
+import { checkOrigin } from "@/lib/csrf";
+import { isValidObjectId } from "@/lib/validation";
 
 export const maxDuration = 60;
 
@@ -239,16 +243,20 @@ async function generateSlide(
   sourcePageCount?: number,
   sourceExcerpt?: string,
   includeImages: boolean = true,
-  assignedLayout?: SlideLayoutType
+  assignedLayout?: SlideLayoutType,
+  sourceExcerptLabel?: string
 ): Promise<SlideData> {
   let context = `Deck Title: ${deckTitle}\n\nSection Title: ${section.title}\nSection Points:\n${section.points
     .map((p) => `- ${p}`)
     .join("\n")}`;
 
   if (sourceExcerpt) {
-    context += `\n\nOriginal Source Document Excerpts (${
-      section.pageRange ? `Pages ${section.pageRange.start}–${section.pageRange.end}` : "Relevant section"
-    }):\n<source_excerpt>\n${sourceExcerpt}\n</source_excerpt>\nUse relevant numbers, statistics, and facts from this excerpt where appropriate.`;
+    const label =
+      sourceExcerptLabel ||
+      (section.pageRange && !section.pageRangeApprox
+        ? `Original Source Document Excerpts (Pages ${section.pageRange.start}–${section.pageRange.end})`
+        : `Original Source Document Excerpts (Section: ${section.title})`);
+    context += `\n\n${label}:\n<source_excerpt>\n${sourceExcerpt}\n</source_excerpt>\nUse relevant numbers, statistics, and facts from this excerpt where appropriate.`;
   }
 
   if (isFirst) context += `\n\n(This is the FIRST section. You MUST use the "title" layout.)`;
@@ -275,8 +283,20 @@ async function generateSlide(
 
     // 2. Lenient parse + sanitize
     const sanitizeStats = { truncations: 0 };
-    const sanitized = sanitizeSlidePayload(res.parsed, isFirst, isLast, sanitizeStats, sourcePageCount);
+    const sanitized = sanitizeSlidePayload(
+      res.parsed,
+      isFirst,
+      isLast,
+      sanitizeStats,
+      sourcePageCount,
+      sourceExcerpt,
+      section.points
+    );
     metrics.truncations += sanitizeStats.truncations;
+
+    const deterministicSourcePage = section.pageRangeApprox
+      ? undefined
+      : formatSourcePage(section.pageRange, sourcePageCount);
 
     // 3. Strict validation
     const parsed = SlideSchema.safeParse(sanitized);
@@ -285,7 +305,8 @@ async function generateSlide(
         ...parsed.data,
         id: randomUUID(),
         sourceSection: section.title,
-        sourcePage: validateAndSanitizeSourcePage(parsed.data.sourcePage, sourcePageCount),
+        sourcePage: deterministicSourcePage,
+        sourcePageApprox: section.pageRangeApprox,
       };
     }
 
@@ -310,7 +331,15 @@ async function generateSlide(
     }
 
     const retrySanitizeStats = { truncations: 0 };
-    const sanitizedRetry = sanitizeSlidePayload(retryRes.parsed, isFirst, isLast, retrySanitizeStats, sourcePageCount);
+    const sanitizedRetry = sanitizeSlidePayload(
+      retryRes.parsed,
+      isFirst,
+      isLast,
+      retrySanitizeStats,
+      sourcePageCount,
+      sourceExcerpt,
+      section.points
+    );
     metrics.truncations += retrySanitizeStats.truncations;
 
     const parsedRetry = SlideSchema.safeParse(sanitizedRetry);
@@ -319,7 +348,8 @@ async function generateSlide(
         ...parsedRetry.data,
         id: randomUUID(),
         sourceSection: section.title,
-        sourcePage: validateAndSanitizeSourcePage(parsedRetry.data.sourcePage, sourcePageCount),
+        sourcePage: deterministicSourcePage,
+        sourcePageApprox: section.pageRangeApprox,
       };
     }
 
@@ -332,6 +362,8 @@ async function generateSlide(
       ...buildFallbackBulletsSlide(section.title, section.points),
       id: randomUUID(),
       sourceSection: section.title,
+      sourcePage: deterministicSourcePage,
+      sourcePageApprox: section.pageRangeApprox,
     };
   } catch (err) {
     metrics.fallbacks++;
@@ -344,74 +376,190 @@ async function generateSlide(
   }
 }
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getSession();
-  if (!session?.sub) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  const { id } = await params;
+export async function processSlideBatch(
+  id: string,
+  userId: string
+): Promise<{ status: number; data: any }> {
+  if (!isValidObjectId(id)) return { status: 400, data: { error: "Invalid deck ID." } };
   await connectDB();
 
-  const deck = await Deck.findOne({ _id: id, userId: session.sub }).select("+sourceText");
-  if (!deck) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  const deck = await Deck.findOne({ _id: id, userId }).select("+sourceText +chunkNotes");
+  if (!deck) return { status: 404, data: { error: "Not found." } };
 
+  if (deck.status === "ready") {
+    return {
+      status: 200,
+      data: {
+        status: "ready",
+        slidesDone: deck.slides?.length || 0,
+        slidesTotal: deck.slides?.length || 0,
+        slides: deck.slides,
+        isComplete: true,
+      },
+    };
+  }
 
-  // Block only if already has slides
-  if (deck.slides && deck.slides.length > 0) {
-    return NextResponse.json({ error: "Slides already generated." }, { status: 400 });
+  if (deck.status === "failed") {
+    return { status: 500, data: { error: deck.error || "Generation failed." } };
   }
 
   if (!deck.outline || deck.outline.length === 0) {
-    return NextResponse.json({ error: "No outline to generate from." }, { status: 400 });
+    return { status: 400, data: { error: "No outline to generate from." } };
   }
 
-  const userCheck = await User.findById(session.sub).select("emailVerified hasPurchased").lean();
+  const userCheck = await User.findById(userId).select("emailVerified hasPurchased").lean();
   if (userCheck && !userCheck.emailVerified && !userCheck.hasPurchased) {
-    return NextResponse.json(
-      { error: "Please verify your email before generating free presentations." },
-      { status: 403 }
-    );
+    return {
+      status: 403,
+      data: { error: "Please verify your email before generating free presentations." },
+    };
   }
 
   // Rate limit daily generations per user (100/day for paid users, 20/day for free users)
   try {
     const isPaid = Boolean(userCheck?.hasPurchased);
-    const { success } = await getUserGenerationLimiter(isPaid).limit(session.sub);
+    const { success } = await getUserGenerationLimiter(isPaid).limit(userId);
     if (!success) {
-      return NextResponse.json(
-        {
+      return {
+        status: 429,
+        data: {
           error: isPaid
             ? "Daily generation limit reached (100 decks/day). Please try again tomorrow."
             : "Daily generation limit reached (20 decks/day). Please try again tomorrow.",
         },
-        { status: 429 }
-      );
+      };
     }
   } catch {
     // If rate limiter fails or redis is unavailable, do not block generation
   }
 
-  // Deduct credit atomically (only if not already in generating/ready stuck state)
-  if (deck.status !== "generating" && deck.status !== "ready") {
-    const user = await User.findOneAndUpdate(
-      { _id: session.sub, credits: { $gte: 1 } },
-      { $inc: { credits: -1 } },
+  // Deduct credit atomically only on initial generation start (once per deck lifecycle)
+  if (!deck.creditCharged) {
+    // (a) Atomically claim the charge; only the request that wins the claim continues
+    const claimDeck = await Deck.findOneAndUpdate(
+      { _id: id, userId, creditCharged: { $ne: true } },
+      { $set: { creditCharged: true, creditRefunded: false, status: "generating" } },
       { returnDocument: "after" }
     );
-    if (!user) {
-      return NextResponse.json({ error: "Insufficient credits." }, { status: 402 });
+    if (!claimDeck) {
+      return {
+        status: 409,
+        data: { inProgress: true, error: "Generation is already starting in another request." },
+      };
     }
+
+    // (b) Then deduct the user's credit and record deductionId on user
+    const deductionId = randomUUID();
+    const chargeTime = new Date();
+
+    const user = await User.findOneAndUpdate(
+      { _id: userId, credits: { $gte: 1 } },
+      {
+        $inc: { credits: -1 },
+        $push: {
+          creditDeductions: {
+            deductionId,
+            deckId: id,
+            deductedAt: chargeTime,
+            refunded: false,
+          },
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+    // (c) If deduction fails (insufficient credits), release the claim and return 402
+    if (!user) {
+      await Deck.updateOne(
+        { _id: id, userId },
+        { $set: { creditCharged: false, status: "outlined" } }
+      );
+      return { status: 402, data: { error: "Insufficient credits." } };
+    }
+
+    // (d) Record deductionId, creditDeductedAt and lastProgressAt; never rely on deck.save() for charge flag
+    await Deck.updateOne(
+      { _id: id, userId },
+      {
+        $set: {
+          deductionId,
+          creditDeductedAt: chargeTime,
+          lastProgressAt: chargeTime,
+        },
+      }
+    );
     deck.creditCharged = true;
     deck.creditRefunded = false;
   }
 
-  deck.status = "generating";
-  deck.slides = [];
-  await deck.save();
+  const totalSlides = deck.outline.length;
+  const currentDone = Array.isArray(deck.slides) ? deck.slides.length : 0;
+
+  if (currentDone >= totalSlides) {
+    await Deck.updateOne(
+      { _id: deck._id },
+      {
+        $set: {
+          status: "ready",
+          slidesDone: totalSlides,
+          slidesTotal: totalSlides,
+          slideBatchLease: null,
+        },
+      }
+    );
+    return {
+      status: 200,
+      data: {
+        status: "ready",
+        slidesDone: totalSlides,
+        slidesTotal: totalSlides,
+        slides: deck.slides,
+        isComplete: true,
+      },
+    };
+  }
+
+  // Atomically acquire batch lease so two simultaneous requests or tabs cannot process the same slides
+  const BATCH_SIZE = 4;
+  const LEASE_TIMEOUT_MS = 60 * 1000; // 60 seconds
+  const now = new Date();
+  const leaseCutoff = new Date(now.getTime() - LEASE_TIMEOUT_MS);
+  const batchStartIndex = currentDone;
+
+  const leasedDeck = await Deck.findOneAndUpdate(
+    {
+      _id: deck._id,
+      userId,
+      status: { $in: ["outlined", "generating"] },
+      $or: [
+        { slideBatchLease: null },
+        { "slideBatchLease.leasedAt": { $lt: leaseCutoff } },
+        { "slideBatchLease.batchStartIndex": { $ne: batchStartIndex } },
+      ],
+    },
+    {
+      $set: {
+        status: "generating",
+        slidesDone: currentDone,
+        slidesTotal: totalSlides,
+        slideBatchLease: { batchStartIndex, leasedAt: now },
+      },
+    },
+    { returnDocument: "after" }
+  ).select("+sourceText +chunkNotes");
+
+  if (!leasedDeck) {
+    // Another concurrent request or tab is currently processing this batch
+    return {
+      status: 200,
+      data: {
+        status: "generating",
+        slidesDone: currentDone,
+        slidesTotal: totalSlides,
+        inProgress: true,
+      },
+    };
+  }
 
   const metrics: GenerationMetrics = {
     truncations: 0,
@@ -423,104 +571,222 @@ export async function POST(
   };
 
   try {
-    // 1. Deck-level layout plan step before per-slide generation to ensure deck-wide diversity
-    const layoutPlan = await planDeckLayouts(
-      deck.title,
-      deck.outline as OutlineSection[],
-      SLIDES_MODEL
-    );
-    console.log(
-      `[SlideGen] Deck ${deck._id} planned layouts:`,
-      layoutPlan.map((p) => `${p.index + 1}:${p.layout}`).join(" -> ")
-    );
+    // Persist layout plan and precomputed excerpts so resume requests never repeat planning
+    let layoutPlan: Array<{ index: number; layout: SlideLayoutType; reason?: string }>;
+    let sectionExcerpts: (string | undefined)[];
 
-    const results = await runWithConcurrency(
-      deck.outline as OutlineSection[],
-      4,
-      async (section, index) => {
-        const isFirst = index === 0;
-        const isLast = index === (deck.outline as OutlineSection[]).length - 1;
-        const excerpt = deck.sourceText
-          ? getSourceExcerptForSection(deck.sourceText, section.pageRange)
+    if (
+      Array.isArray(leasedDeck.slideGenerationProgress?.layoutPlan) &&
+      leasedDeck.slideGenerationProgress.layoutPlan.length === totalSlides &&
+      Array.isArray(leasedDeck.slideGenerationProgress?.sectionExcerpts)
+    ) {
+      layoutPlan = leasedDeck.slideGenerationProgress.layoutPlan as any;
+      sectionExcerpts = leasedDeck.slideGenerationProgress.sectionExcerpts;
+    } else {
+      sectionExcerpts = (leasedDeck.outline as OutlineSection[]).map((section) => {
+        let excerpt = leasedDeck.sourceText
+          ? getSourceExcerptForSection(
+              leasedDeck.sourceText,
+              section.pageRange,
+              4_000,
+              section.pageRangeApprox,
+              section.title,
+              section.points
+            )
           : undefined;
+
+        if (!excerpt && leasedDeck.sourceText) {
+          if (leasedDeck.sourceText.length <= 12_000) {
+            excerpt = leasedDeck.sourceText;
+          } else if (Array.isArray(leasedDeck.chunkNotes) && leasedDeck.chunkNotes.length > 0) {
+            excerpt = getRelevantChunkNotesExcerpt(leasedDeck.chunkNotes, section.title, section.points);
+          }
+        }
+        return excerpt;
+      });
+
+      layoutPlan = await planDeckLayouts(
+        leasedDeck.title,
+        leasedDeck.outline as OutlineSection[],
+        SLIDES_MODEL,
+        sectionExcerpts
+      );
+
+      await Deck.updateOne(
+        { _id: leasedDeck._id },
+        {
+          $set: {
+            "slideGenerationProgress.layoutPlan": layoutPlan,
+            "slideGenerationProgress.sectionExcerpts": sectionExcerpts,
+            "slideGenerationProgress.slidesTotal": totalSlides,
+          },
+        }
+      );
+    }
+
+    const batchEndIndex = Math.min(batchStartIndex + BATCH_SIZE, totalSlides);
+    const batchSections = (leasedDeck.outline as OutlineSection[]).slice(batchStartIndex, batchEndIndex);
+
+    const batchResults = await runWithConcurrency(
+      batchSections,
+      Math.min(batchSections.length, 4),
+      async (section, offset) => {
+        const globalIdx = batchStartIndex + offset;
+        const isFirst = globalIdx === 0;
+        const isLast = globalIdx === totalSlides - 1;
+        const excerpt = sectionExcerpts[globalIdx];
+
+        let excerptLabel =
+          section.pageRange && !section.pageRangeApprox
+            ? `Original Source Document Excerpts (Pages ${section.pageRange.start}–${section.pageRange.end})`
+            : `Original Source Document Excerpts (Section: ${section.title})`;
+
+        if (!excerpt && leasedDeck.sourceText && leasedDeck.sourceText.length <= 12_000) {
+          excerptLabel = "Original Source Document (Full document reference)";
+        } else if (!excerpt && Array.isArray(leasedDeck.chunkNotes) && leasedDeck.chunkNotes.length > 0) {
+          excerptLabel = "Source Document Notes (Reference notes, not verbatim source text)";
+        }
+
         return generateSlide(
-          deck.title,
+          leasedDeck.title,
           section,
           isFirst,
           isLast,
           metrics,
-          deck.sourcePageCount,
+          leasedDeck.sourcePageCount,
           excerpt,
-          deck.includeImages !== false,
-          layoutPlan[index]?.layout
+          leasedDeck.includeImages !== false,
+          layoutPlan[globalIdx]?.layout,
+          excerptLabel
         );
-
       }
     );
 
-    const rawSlides = results.filter(Boolean) as SlideData[];
-    const validSlides = rawSlides.map((s) => groundAndSanitizeSlide(s, deck.sourceText));
+    const rawBatchSlides = batchResults.filter(Boolean) as SlideData[];
+    const validBatchSlides = rawBatchSlides.map((s, offset) => {
+      const globalIdx = batchStartIndex + offset;
+      const sec = (leasedDeck.outline as OutlineSection[])[globalIdx];
+      const groundingSource = leasedDeck.sourceText || "";
+      return groundAndSanitizeSlide(s, groundingSource, sec?.points);
+    });
 
-    // Resolve stock photography in a bounded concurrent pass (3 parallel fetches)
-    if (deck.includeImages !== false) {
-      await resolveDeckImages(validSlides);
+    if (leasedDeck.includeImages !== false) {
+      await resolveDeckImages(validBatchSlides);
     }
 
-    console.log(
-      `[SlideGen] Deck ${deck._id} generation completed: ${validSlides.length} slides, ${metrics.truncations} truncations, ${metrics.retries} retries, ${metrics.fallbacks} fallbacks, ${metrics.totalTokens} tokens.`
-    );
+    // Idempotent write by slide index: ensure existing slides up to batchStartIndex are preserved
+    const currentDeck = await Deck.findById(leasedDeck._id).select("slides");
+    const existingSlides = (currentDeck?.slides || []).slice(0, batchStartIndex);
+    const updatedSlides = [...existingSlides, ...validBatchSlides];
+    const newDone = updatedSlides.length;
+    const isComplete = newDone >= totalSlides;
 
-    const firstSlideWithImg = validSlides.find((s) => (s.content as any)?.imageUrl);
+    const firstSlideWithImg = updatedSlides.find((s: any) => s.content?.imageUrl);
     const coverImage = firstSlideWithImg ? (firstSlideWithImg.content as any).imageUrl : undefined;
 
+    const progressTime = new Date();
     await Deck.updateOne(
-      { _id: deck._id },
+      { _id: leasedDeck._id },
       {
         $set: {
-          slides: validSlides,
+          slides: updatedSlides,
+          slidesDone: newDone,
+          slidesTotal: totalSlides,
+          "slideGenerationProgress.slidesDone": newDone,
+          "slideGenerationProgress.slidesTotal": totalSlides,
+          status: isComplete ? "ready" : "generating",
           coverImage,
-          status: "ready",
+          slideBatchLease: null,
+          lastProgressAt: progressTime,
+          updatedAt: progressTime,
+        },
+        $inc: {
           "tokenUsage.generatePromptTokens": metrics.promptTokens,
           "tokenUsage.generateCompletionTokens": metrics.completionTokens,
-          "tokenUsage.totalTokens": (deck.tokenUsage?.totalTokens ?? 0) + metrics.totalTokens,
+          "tokenUsage.totalTokens": metrics.totalTokens,
         },
       }
     );
 
-    // Track analytics event
-    void trackEvent("deck_generated", {
-      userId: session.sub,
-      deckId: id,
-      meta: {
-        slideCount: validSlides.length,
-        tokens: metrics.totalTokens,
-        fallbacks: metrics.fallbacks,
-        retries: metrics.retries,
-      },
-    });
+    if (isComplete) {
+      // Pin the first generated version in DeckVersion so it's never rotated out
+      try {
+        const hasPinned = await DeckVersion.exists({ deckId: leasedDeck._id, pinned: true });
+        if (!hasPinned) {
+          await DeckVersion.create({
+            deckId: leasedDeck._id,
+            slides: updatedSlides,
+            theme: leasedDeck.theme,
+            pinned: true,
+            isInitial: true,
+            reason: "Initial generated version",
+          });
+        }
+      } catch (versionErr) {
+        console.error("Failed to pin initial generated DeckVersion:", versionErr);
+      }
 
-    return NextResponse.json({ message: "Done", slideCount: validSlides.length });
+      void trackEvent("deck_generated", {
+        userId,
+        deckId: id,
+        meta: {
+          slideCount: updatedSlides.length,
+          tokens: metrics.totalTokens,
+          fallbacks: metrics.fallbacks,
+          retries: metrics.retries,
+        },
+      });
+    }
+
+    return {
+      status: 200,
+      data: {
+        status: isComplete ? "ready" : "generating",
+        slidesDone: newDone,
+        slidesTotal: totalSlides,
+        slides: updatedSlides,
+        isComplete,
+      },
+    };
   } catch (err) {
     console.error("Generation error:", err);
 
-    // Track failure analytics event with sanitized error code only
     void trackEvent("generation_failed", {
-      userId: session.sub,
+      userId,
       deckId: id,
       meta: { error: sanitizeAnalyticsErrorMessage(err) },
     });
 
-    // Atomic refund guard: Never refund a deck with status "ready"
-    // Refund only if creditCharged && !creditRefunded
-    await executeAtomicRefund(deck._id, session.sub);
+    await executeAtomicRefund(deck._id, userId);
 
-    return NextResponse.json({ error: "Generation failed." }, { status: 500 });
+    return { status: 500, data: { error: "Generation failed." } };
   }
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
+  const session = await getSession();
+  if (!session?.sub) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
+  const result = await processSlideBatch(id, session.sub);
+  return NextResponse.json(result.data, { status: result.status });
 }
 
 /**
  * Atomically refunds 1 credit to a user for a failed generation:
- * - Only if credit was charged (creditCharged === true).
+ * - Only if credit was claimed and charged (creditCharged === true).
+ * - Only if credit was actually deducted (creditDeductedAt on deck OR unrefunded deduction on user).
  * - Only if credit was not already refunded (creditRefunded === false).
  * - Never refunds a deck whose status is "ready".
  * - Atomic findOneAndUpdate guarantees exactly-once refund even under concurrent calls.
@@ -529,6 +795,43 @@ export async function executeAtomicRefund(
   deckId: string | any,
   userId: string | any
 ): Promise<boolean> {
+  if (!isValidObjectId(deckId)) return false;
+  const deck = await Deck.findOne({ _id: deckId, userId });
+  if (!deck || deck.status === "ready" || deck.creditRefunded || !deck.creditCharged) {
+    if (deck && deck.status !== "ready") {
+      await Deck.updateOne(
+        { _id: deckId, status: { $ne: "ready" } },
+        { $set: { status: "failed", error: "Slide generation failed." } }
+      );
+    }
+    return false;
+  }
+
+  // Check if deduction happened:
+  // (a) either recorded on deck (creditDeductedAt)
+  // (b) or recorded on user (creditDeductions for this deckId with refunded === false)
+  let deductionConfirmed = Boolean(deck.creditDeductedAt);
+  if (!deductionConfirmed) {
+    const userWithDeduction = await User.findOne({
+      _id: userId,
+      creditDeductions: {
+        $elemMatch: { deckId, refunded: false },
+      },
+    });
+    if (userWithDeduction) {
+      deductionConfirmed = true;
+    }
+  }
+
+  if (!deductionConfirmed) {
+    // Deduction never happened (crash between claim and deduction, or free deck)
+    await Deck.updateOne(
+      { _id: deckId, status: { $ne: "ready" } },
+      { $set: { status: "failed", error: "Slide generation failed." } }
+    );
+    return false;
+  }
+
   const updatedDeck = await Deck.findOneAndUpdate(
     {
       _id: deckId,
@@ -544,7 +847,21 @@ export async function executeAtomicRefund(
   );
 
   if (updatedDeck) {
-    await User.updateOne({ _id: userId }, { $inc: { credits: 1 } });
+    const updateResult = await User.updateOne(
+      {
+        _id: userId,
+        creditDeductions: {
+          $elemMatch: { deckId, refunded: false },
+        },
+      },
+      {
+        $inc: { credits: 1 },
+        $set: { "creditDeductions.$.refunded": true },
+      }
+    );
+    if (updateResult.modifiedCount === 0) {
+      await User.updateOne({ _id: userId }, { $inc: { credits: 1 } });
+    }
     console.log(`[SlideGen] Deck ${deckId}: Refunded 1 credit after failure.`);
     return true;
   } else {

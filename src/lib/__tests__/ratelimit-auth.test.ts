@@ -94,3 +94,34 @@ describe("getClientIp", () => {
     assert.equal(getClientIp(req), "127.0.0.1");
   });
 });
+
+describe("Rate Limiter Helper Definitions", () => {
+  it("exports outline, image search, and deck mutation rate limiters", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL || "https://fake.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "fake-token";
+
+    const {
+      getOutlineMinuteLimiter,
+      getOutlineDailyLimiter,
+      getImageSearchUserLimiter,
+      getUnsplashGlobalLimiter,
+      getDeckMutationLimiter,
+    } = await import("../ratelimit");
+
+    const outlineMin = getOutlineMinuteLimiter();
+    assert.ok(outlineMin);
+
+    const outlineDay = getOutlineDailyLimiter();
+    assert.ok(outlineDay);
+
+    const imgUser = getImageSearchUserLimiter();
+    assert.ok(imgUser);
+
+    const unsplashGlobal = getUnsplashGlobalLimiter();
+    assert.ok(unsplashGlobal);
+
+    const deckMutate = getDeckMutationLimiter();
+    assert.ok(deckMutate);
+  });
+});
+

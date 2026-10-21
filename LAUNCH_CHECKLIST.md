@@ -50,7 +50,7 @@ This checklist enumerates all production requirements across infrastructure, sec
 - **Automated Tests:** Verified in `longdoc-stepper-and-recovery.test.ts` and `longdoc-pipeline.test.ts`.
 
 ### 2.2 Production Configuration: [Manual Action Required]
-- [ ] **Vercel Cron Configuration:** `vercel.json` contains:
+- [ ] **MANDATORY PRE-LAUNCH GATE — Vercel Cron Scheduling:** `vercel.json` must have `/api/cron/cleanup` scheduled to guarantee the 30-day source text purge and automatic stuck-deck credit refund:
   ```json
   {
     "crons": [
@@ -61,10 +61,11 @@ This checklist enumerates all production requirements across infrastructure, sec
     ]
   }
   ```
-  - **Hobby Plan Limitation:** Vercel Hobby plan only supports 1 cron execution per day (`0 2 * * *`). On Hobby, stuck deck refunds will occur during the daily 2 AM run.
-  - **Pro Plan Recommendation:** If upgrading to Vercel Pro, update `schedule` in `vercel.json` to `"*/15 * * * *"` or `"*/30 * * * *"` so stuck decks recover within 30–45 minutes of a browser drop.
-  - **Alternative (Free 15-min Trigger):** Configure an external cron ping (e.g. BetterStack, CronJob.de, or GitHub Actions scheduled workflow) to send a `GET` request every 15 minutes:
-    `https://slidequill.in/api/cron/cleanup` with header `Authorization: Bearer <CRON_SECRET>`.
+- **Hobby Plan Limitation & Daily Schedule:** `vercel.json` defines `"0 2 * * *"` (daily execution at 2:00 AM UTC), which fully complies with Vercel's Hobby plan limitation of 1 cron job per day.
+- **Lazy Real-Time Stuck-Deck Recovery:** To ensure users never have to wait until 2 AM for stuck-deck recovery, `GET /api/decks/[id]` runs lazy stuck-deck recovery in real-time. Whenever a user fetches or visits a deck that has been stalled in `"outlining"` or `"generating"` for $\ge 30$ minutes with no progress (`updatedAt < now - 30m`), `getDeckById` runs the exact same atomic refund-and-fail logic (`executeAtomicRefund`), marks the deck failed, and restores their credit instantly.
+- **Pro Plan Recommendation:** If upgrading to Vercel Pro, update `schedule` in `vercel.json` to `"*/15 * * * *"` or `"*/30 * * * *"` so background decks recover automatically even without user interaction.
+- **Alternative (Free 15-min External Trigger):** Configure an external cron ping (e.g. BetterStack, CronJob.de, or GitHub Actions scheduled workflow) to send a `GET` request every 15 minutes:
+  `https://slidequill.in/api/cron/cleanup` with header `Authorization: Bearer <CRON_SECRET>`.
 
 ---
 

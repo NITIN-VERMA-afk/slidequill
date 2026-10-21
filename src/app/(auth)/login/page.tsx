@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 const schema = z.object({
@@ -21,7 +21,7 @@ const slides = [
   { title: "Team Metrics", sub: "Performance Report" },
 ];
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
@@ -302,5 +302,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F4F6FB]" />}>
+      <LoginContent />
+    </Suspense>
   );
 }

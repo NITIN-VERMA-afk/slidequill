@@ -494,6 +494,30 @@ export async function fetchSafeImage(urlStr?: string | null): Promise<SafeImageR
     };
   }
 
+  const trimmed = urlStr.trim();
+  if (trimmed.startsWith("data:")) {
+    const match = trimmed.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (match) {
+      const mime = match[1].toLowerCase() as "image/jpeg" | "image/png" | "image/webp";
+      if (ALLOWED_CONTENT_TYPES.has(mime)) {
+        try {
+          const buf = Buffer.from(match[2], "base64");
+          return {
+            buffer: buf,
+            contentType: mime,
+            dataUrl: trimmed,
+          };
+        } catch {}
+      }
+    }
+    return {
+      buffer: BUNDLED_PLACEHOLDER_BUFFER,
+      contentType: "image/png",
+      dataUrl: BUNDLED_PLACEHOLDER_DATA_URL,
+      isPlaceholder: true,
+    };
+  }
+
   try {
     return await fetchSafeImageStrict(urlStr.trim());
   } catch (err) {

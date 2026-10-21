@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   ChevronLeft,
 } from "lucide-react";
+import GrantCreditsForm from "@/components/admin/GrantCreditsForm";
 
 function getSinceDate(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -214,6 +215,9 @@ export default async function AdminFunnelPage({
               : "100% Reliability"}
           </span>
         </div>
+
+        {/* Admin Grant Credits Tool */}
+        <GrantCreditsForm />
 
       </div>
     </div>

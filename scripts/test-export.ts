@@ -396,13 +396,13 @@ const fixtures: FixtureDeck[] = [
       {
         id: "s2",
         layout: "chart",
-        title: "Annual Revenue Trajectory By Quarter",
+        title: "ARR Growth from Q1 to Q4",
         notes: "Bar chart demonstrating Q-o-Q ARR expansion.",
         content: {
           chartType: "bar",
           categories: ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"],
           series: [{ name: "ARR ($M)", values: [1.2, 1.8, 2.6, 3.5] }],
-          caption: "ARR expanded by 190% across the full fiscal year.",
+          caption: "ARR accelerated consistently across four consecutive fiscal quarters.",
         },
       },
       {
@@ -491,7 +491,7 @@ async function run() {
   for (const fixture of fixtures) {
     try {
       const start = Date.now();
-      const buffer = await buildPptx(fixture.title, fixture.slides, fixture.theme, false);
+      const buffer = await buildPptx(fixture.title, fixture.slides, fixture.theme, false, `${fixture.name}.pdf`);
       const filePath = path.join(EXPORT_DIR, `${fixture.name}.pptx`);
       fs.writeFileSync(filePath, buffer);
       const sizeKb = Math.round(buffer.length / 1024);

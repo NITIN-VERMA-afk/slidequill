@@ -5,6 +5,7 @@ export interface OutlineSection {
   title: string;
   points: string[];
   pageRange?: { start: number; end: number };
+  pageRangeApprox?: boolean;
 }
 
 export type DeckStatus =
@@ -40,6 +41,7 @@ export interface ISlide {
   content: any;
   notes: string;
   sourcePage?: number | string;
+  sourcePageApprox?: boolean;
   sourceSection?: string;
   regenerations?: number;
   meta?: { fallback?: boolean };
@@ -58,6 +60,25 @@ export interface IChunkLease {
   leasedAt: Date;
 }
 
+export interface ISlideGenerationProgress {
+  slidesDone: number;
+  slidesTotal: number;
+  layoutPlan?: Array<{ index: number; layout: string; reason?: string }>;
+  sectionExcerpts?: Array<string | undefined>;
+}
+
+export interface ISlideBatchLease {
+  batchStartIndex: number;
+  leasedAt: Date;
+}
+
+export interface IDeckShare {
+  enabled: boolean;
+  slug?: string;
+  createdAt?: Date;
+  revokedAt?: Date;
+}
+
 export interface IDeck extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
@@ -71,6 +92,10 @@ export interface IDeck extends Document {
   theme: string;
   outline: OutlineSection[];
   slides: ISlide[];
+  slidesDone?: number;
+  slidesTotal?: number;
+  slideGenerationProgress?: ISlideGenerationProgress;
+  slideBatchLease?: ISlideBatchLease | null;
   chunkNotes?: IChunkNote[];
   outlineProgress?: IOutlineProgress;
   tokenUsage?: IDeckTokenUsage;
@@ -81,6 +106,11 @@ export interface IDeck extends Document {
   coverImage?: string;
   creditCharged: boolean;
   creditRefunded: boolean;
+  creditDeductedAt?: Date;
+  deductionId?: string;
+  lastProgressAt?: Date;
+  version?: number;
+  share?: IDeckShare;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -94,6 +124,7 @@ const OutlineSectionSchema = new Schema<OutlineSection>(
       start: { type: Number },
       end: { type: Number },
     },
+    pageRangeApprox: { type: Boolean },
   },
   { _id: false }
 );
@@ -131,6 +162,7 @@ const SlideSchemaMongoose = new Schema<ISlide>(
     content: { type: Schema.Types.Mixed, default: {} },
     notes: { type: String, default: "" },
     sourcePage: { type: Schema.Types.Mixed },
+    sourcePageApprox: { type: Boolean },
     sourceSection: { type: String },
     regenerations: { type: Number, default: 0 },
   },
@@ -163,11 +195,35 @@ const DeckSchema = new Schema<IDeck>(
     theme: { type: String, default: "modern" },
     outline: { type: [OutlineSectionSchema], default: [] },
     slides: { type: [SlideSchemaMongoose], default: [] },
+    slidesDone: { type: Number, default: 0 },
+    slidesTotal: { type: Number, default: 0 },
+    slideGenerationProgress: {
+      slidesDone: { type: Number, default: 0 },
+      slidesTotal: { type: Number, default: 0 },
+      layoutPlan: [{ type: Schema.Types.Mixed }],
+      sectionExcerpts: [{ type: Schema.Types.Mixed }],
+    },
+    slideBatchLease: {
+      type: new Schema(
+        {
+          batchStartIndex: { type: Number },
+          leasedAt: { type: Date },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
     chunkNotes: { type: [ChunkNoteSchema], default: [], select: false },
     outlineProgress: { type: OutlineProgressSchema },
     chunkLease: {
-      chunkIndex: { type: Number },
-      leasedAt: { type: Date },
+      type: new Schema(
+        {
+          chunkIndex: { type: Number },
+          leasedAt: { type: Date },
+        },
+        { _id: false }
+      ),
+      default: null,
     },
     tokenUsage: {
       outlinePromptTokens: { type: Number, default: 0 },
@@ -182,9 +238,27 @@ const DeckSchema = new Schema<IDeck>(
     error: { type: String, default: "" },
     creditCharged: { type: Boolean, default: false },
     creditRefunded: { type: Boolean, default: false },
+    creditDeductedAt: { type: Date },
+    deductionId: { type: String },
+    lastProgressAt: { type: Date },
+    version: { type: Number, default: 1 },
+    share: {
+      type: new Schema(
+        {
+          enabled: { type: Boolean, default: false },
+          slug: { type: String, trim: true },
+          createdAt: { type: Date },
+          revokedAt: { type: Date },
+        },
+        { _id: false }
+      ),
+      default: () => ({ enabled: false }),
+    },
   },
   { timestamps: true }
 );
+
+DeckSchema.index({ "share.slug": 1 }, { unique: true, sparse: true });
 
 const Deck = models.Deck ?? model<IDeck>("Deck", DeckSchema);
 export default Deck;

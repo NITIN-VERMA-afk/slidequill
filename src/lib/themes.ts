@@ -123,7 +123,7 @@ export const themes: Record<string, ThemeDef> = {
       accent: "#166534", // forest green
       accent2: "#22c55e",
     },
-    headingFont: { name: "Palatino Linotype", fallback: "Georgia, serif" },
+    headingFont: { name: "Georgia", fallback: "serif" },
     bodyFont: { name: "Georgia", fallback: "serif" },
     titleSlideStyle: "split",
     cornerRadius: 0,

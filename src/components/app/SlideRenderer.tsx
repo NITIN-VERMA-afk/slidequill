@@ -5,17 +5,33 @@ import type { SlideData } from "@/lib/slides-schema";
 import { getTheme } from "@/lib/themes";
 import { SlideIcon } from "./SlideIcon";
 import { SlideChart } from "./SlideCharts";
+import { InlineEditableText } from "./InlineEditableText";
+import {
+  updateSlideTitle,
+  updateSlideBullet,
+  updateSlideSubtitle,
+  updateSlideStat,
+  updateSlideColumn,
+  updateSlideQuote,
+  updateSlideProcessStep,
+  updateSlideClosing,
+  updateSlideImageHeadingOrCaption,
+} from "@/lib/slide-mutations";
 
 interface SlideRendererProps {
   slide: SlideData;
   theme?: string;
   className?: string;
+  editable?: boolean;
+  onSlideChange?: (updatedSlide: SlideData) => void;
 }
 
 export default function SlideRenderer({
   slide,
   theme = "modern",
   className,
+  editable = false,
+  onSlideChange,
 }: SlideRendererProps) {
   const t = getTheme(theme);
 
@@ -76,11 +92,24 @@ export default function SlideRenderer({
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/65 to-black/45 flex flex-col justify-center px-[10cqw]">
-                <h1 className="text-[6.5cqw] font-extrabold leading-tight mb-[2.5cqw] text-white">
-                  {slide.title}
-                </h1>
+                <InlineEditableText
+                  as="h1"
+                  className="text-[6.5cqw] font-extrabold leading-tight mb-[2.5cqw] text-white"
+                  value={slide.title}
+                  editable={editable}
+                  maxLength={200}
+                  onEmptyCommit="revert"
+                  onChange={(newTitle) => onSlideChange?.(updateSlideTitle(slide, newTitle))}
+                />
                 {slide.content.subtitle && (
-                  <p className="text-[3.2cqw] text-white/85 max-w-3xl">{slide.content.subtitle}</p>
+                  <InlineEditableText
+                    as="p"
+                    className="text-[3.2cqw] text-white/85 max-w-3xl"
+                    value={slide.content.subtitle}
+                    editable={editable}
+                    multiline={true}
+                    onChange={(newSub) => onSlideChange?.(updateSlideSubtitle(slide, newSub))}
+                  />
                 )}
                 {slide.content.photographer && (
                   <div className="absolute bottom-2 right-3 text-white/60 text-[1.1cqw]">
@@ -96,11 +125,26 @@ export default function SlideRenderer({
           return (
             <div className="absolute inset-0 flex">
               <div className="w-1/2 flex flex-col justify-center px-[8cqw]" style={{ backgroundColor: t.colors.surface }}>
-                <h1 className="text-[6cqw] font-extrabold leading-tight mb-[2cqw]" style={styleHeading}>
-                  {slide.title}
-                </h1>
+                <InlineEditableText
+                  as="h1"
+                  className="text-[6cqw] font-extrabold leading-tight mb-[2cqw]"
+                  style={styleHeading}
+                  value={slide.title}
+                  editable={editable}
+                  maxLength={200}
+                  onEmptyCommit="revert"
+                  onChange={(newTitle) => onSlideChange?.(updateSlideTitle(slide, newTitle))}
+                />
                 {slide.content.subtitle && (
-                  <p className="text-[3cqw]" style={{ color: t.colors.mutedText }}>{slide.content.subtitle}</p>
+                  <InlineEditableText
+                    as="p"
+                    className="text-[3cqw]"
+                    style={{ color: t.colors.mutedText }}
+                    value={slide.content.subtitle}
+                    editable={editable}
+                    multiline={true}
+                    onChange={(newSub) => onSlideChange?.(updateSlideSubtitle(slide, newSub))}
+                  />
                 )}
               </div>
               <div className="w-1/2 flex items-center justify-center p-[5cqw]">
@@ -127,11 +171,26 @@ export default function SlideRenderer({
 
         return (
           <div className={clsx("flex-1 flex flex-col justify-center px-[10cqw]", t.titleSlideStyle === "center" ? "items-center text-center" : "items-start")}>
-            <h1 className="text-[7cqw] font-extrabold leading-tight mb-[3cqw]" style={styleHeading}>
-              {slide.title}
-            </h1>
+            <InlineEditableText
+              as="h1"
+              className="text-[7cqw] font-extrabold leading-tight mb-[3cqw]"
+              style={styleHeading}
+              value={slide.title}
+              editable={editable}
+              maxLength={200}
+              onEmptyCommit="revert"
+              onChange={(newTitle) => onSlideChange?.(updateSlideTitle(slide, newTitle))}
+            />
             {slide.content.subtitle && (
-              <p className="text-[3.5cqw]" style={{ color: t.colors.mutedText }}>{slide.content.subtitle}</p>
+              <InlineEditableText
+                as="p"
+                className="text-[3.5cqw]"
+                style={{ color: t.colors.mutedText }}
+                value={slide.content.subtitle}
+                editable={editable}
+                multiline={true}
+                onChange={(newSub) => onSlideChange?.(updateSlideSubtitle(slide, newSub))}
+              />
             )}
           </div>
         );
@@ -140,9 +199,16 @@ export default function SlideRenderer({
       {/* Standard Layouts Header (except title, closing, and full-bleed images) */}
       {slide.layout !== "title" && slide.layout !== "closing" && !isFullBleedImage && !isQuoteWithBgImage && (
         <div className="absolute top-[4cqw] left-[5cqw] right-[5cqw] h-[10cqw]">
-          <h2 className="text-[4cqw] font-bold leading-tight" style={styleHeading}>
-            {slide.title}
-          </h2>
+          <InlineEditableText
+            as="h2"
+            className="text-[4cqw] font-bold leading-tight"
+            style={styleHeading}
+            value={slide.title}
+            editable={editable}
+            maxLength={200}
+            onEmptyCommit="revert"
+            onChange={(newTitle) => onSlideChange?.(updateSlideTitle(slide, newTitle))}
+          />
           <div className="h-[0.5cqw] w-[10cqw] mt-[1.5cqw]" style={{ backgroundColor: t.colors.accent, ...roundedStyle }} />
         </div>
       )}
@@ -167,7 +233,23 @@ export default function SlideRenderer({
                           ) : (
                             <span className="mt-[1cqw] w-[0.8cqw] h-[0.8cqw] shrink-0" style={{ backgroundColor: t.colors.accent, ...roundedStyle }} />
                           )}
-                          <span className="leading-snug">{b}</span>
+                          <InlineEditableText
+                            as="span"
+                            className="leading-snug"
+                            value={b}
+                            editable={editable}
+                            multiline={true}
+                            maxLength={500}
+                            onEmptyCommit="remove"
+                            onRemove={() => {
+                              const list = slide.content.bullets || [];
+                              if (list.length > 1) {
+                                const next = list.filter((_: any, idx: number) => idx !== i);
+                                onSlideChange?.({ ...slide, content: { ...slide.content, bullets: next } });
+                              }
+                            }}
+                            onChange={(newB) => onSlideChange?.(updateSlideBullet(slide, i, newB))}
+                          />
                         </li>
                       );
                     })}
@@ -199,7 +281,22 @@ export default function SlideRenderer({
                       ) : (
                         <span className="mt-[1cqw] w-[1cqw] h-[1cqw] shrink-0" style={{ backgroundColor: t.colors.accent, ...roundedStyle }} />
                       )}
-                      <span>{b}</span>
+                      <InlineEditableText
+                        as="span"
+                        value={b}
+                        editable={editable}
+                        multiline={true}
+                        maxLength={500}
+                        onEmptyCommit="remove"
+                        onRemove={() => {
+                          const list = slide.content.bullets || [];
+                          if (list.length > 1) {
+                            const next = list.filter((_: any, idx: number) => idx !== i);
+                            onSlideChange?.({ ...slide, content: { ...slide.content, bullets: next } });
+                          }
+                        }}
+                        onChange={(newB) => onSlideChange?.(updateSlideBullet(slide, i, newB))}
+                      />
                     </li>
                   );
                 })}
@@ -214,13 +311,26 @@ export default function SlideRenderer({
                   {[slide.content.left, slide.content.right].map((col, idx) => (
                     <div key={idx} className="p-[2.5cqw] h-full" style={{ backgroundColor: t.colors.surface, ...roundedStyle }}>
                       {col?.heading && (
-                        <h3 className="text-[2.6cqw] font-bold mb-[1.5cqw]" style={styleHeading}>{col.heading}</h3>
+                        <InlineEditableText
+                          as="h3"
+                          className="text-[2.6cqw] font-bold mb-[1.5cqw]"
+                          style={styleHeading}
+                          value={col.heading}
+                          editable={editable}
+                          onChange={(newH) => onSlideChange?.(updateSlideColumn(slide, idx === 0 ? "left" : "right", "heading", newH))}
+                        />
                       )}
                       <ul className="list-none space-y-[1.2cqw] text-[2.2cqw]">
                         {col?.bullets?.map((b: string, i: number) => (
                           <li key={i} className="flex gap-[1cqw] items-start">
                             <span className="mt-[0.8cqw] w-[0.6cqw] h-[0.6cqw] shrink-0" style={{ backgroundColor: t.colors.accent2, ...roundedStyle }} />
-                            <span>{b}</span>
+                            <InlineEditableText
+                              as="span"
+                              value={b}
+                              editable={editable}
+                              multiline={true}
+                              onChange={(newB) => onSlideChange?.(updateSlideColumn(slide, idx === 0 ? "left" : "right", "bullet", newB, i))}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -245,13 +355,42 @@ export default function SlideRenderer({
                 {[slide.content.left, slide.content.right].map((col, idx) => (
                   <div key={idx} className="p-[3cqw] h-full" style={{ backgroundColor: t.colors.surface, ...roundedStyle }}>
                     {col?.heading && (
-                      <h3 className="text-[3cqw] font-bold mb-[2cqw]" style={styleHeading}>{col.heading}</h3>
+                      <InlineEditableText
+                        as="h3"
+                        className="text-[3cqw] font-bold mb-[2cqw]"
+                        style={styleHeading}
+                        value={col.heading}
+                        editable={editable}
+                        onChange={(newH) => onSlideChange?.(updateSlideColumn(slide, idx === 0 ? "left" : "right", "heading", newH))}
+                      />
                     )}
                     <ul className="list-none space-y-[1.5cqw] text-[2.5cqw]">
                       {col?.bullets?.map((b: string, i: number) => (
                         <li key={i} className="flex gap-[1.5cqw] items-start">
                           <span className="mt-[1cqw] w-[0.7cqw] h-[0.7cqw] shrink-0" style={{ backgroundColor: t.colors.accent2, ...roundedStyle }} />
-                          <span>{b}</span>
+                          <InlineEditableText
+                            as="span"
+                            value={b}
+                            editable={editable}
+                            multiline={true}
+                            maxLength={500}
+                            onEmptyCommit="remove"
+                            onRemove={() => {
+                              const key = idx === 0 ? "left" : "right";
+                              const colObj = (slide.content as any)?.[key];
+                              if (colObj?.bullets?.length > 1) {
+                                const nextBullets = colObj.bullets.filter((_: any, bIdx: number) => bIdx !== i);
+                                onSlideChange?.({
+                                  ...slide,
+                                  content: {
+                                    ...slide.content,
+                                    [key]: { ...colObj, bullets: nextBullets },
+                                  },
+                                });
+                              }
+                            }}
+                            onChange={(newB) => onSlideChange?.(updateSlideColumn(slide, idx === 0 ? "left" : "right", "bullet", newB, i))}
+                          />
                         </li>
                       ))}
                     </ul>
@@ -270,12 +409,22 @@ export default function SlideRenderer({
                       <SlideIcon name={s.icon} size="1.2em" />
                     </div>
                   )}
-                  <div className="text-[7cqw] font-black leading-none" style={{ color: t.colors.accent, fontFamily: styleHeading.fontFamily }}>
-                    {s.value}
-                  </div>
-                  <div className="text-[2cqw] font-medium mt-[1cqw] uppercase tracking-wider" style={{ color: t.colors.mutedText }}>
-                    {s.label}
-                  </div>
+                  <InlineEditableText
+                    as="div"
+                    className="text-[7cqw] font-black leading-none"
+                    style={{ color: t.colors.accent, fontFamily: styleHeading.fontFamily }}
+                    value={s.value}
+                    editable={editable}
+                    onChange={(newVal) => onSlideChange?.(updateSlideStat(slide, i, "value", newVal))}
+                  />
+                  <InlineEditableText
+                    as="div"
+                    className="text-[2cqw] font-medium mt-[1cqw] uppercase tracking-wider"
+                    style={{ color: t.colors.mutedText }}
+                    value={s.label}
+                    editable={editable}
+                    onChange={(newLabel) => onSlideChange?.(updateSlideStat(slide, i, "label", newLabel))}
+                  />
                 </div>
               ))}
             </div>
@@ -288,8 +437,23 @@ export default function SlideRenderer({
                   <div className="w-[7cqw] h-[7cqw] flex items-center justify-center text-[3cqw] font-bold mb-[2cqw]" style={{ backgroundColor: t.colors.accent, color: t.colors.bg, borderRadius: t.cornerRadius > 0 ? "50%" : "0" }}>
                     {s.icon ? <SlideIcon name={s.icon} size="1.2em" /> : i + 1}
                   </div>
-                  <div className="text-[2.5cqw] font-bold mb-[1cqw]" style={{ color: t.colors.text }}>{s.label}</div>
-                  <div className="text-[1.8cqw]" style={{ color: t.colors.mutedText }}>{s.desc}</div>
+                  <InlineEditableText
+                    as="div"
+                    className="text-[2.5cqw] font-bold mb-[1cqw]"
+                    style={{ color: t.colors.text }}
+                    value={s.label}
+                    editable={editable}
+                    onChange={(newLabel) => onSlideChange?.(updateSlideProcessStep(slide, i, "label", newLabel))}
+                  />
+                  <InlineEditableText
+                    as="div"
+                    className="text-[1.8cqw]"
+                    style={{ color: t.colors.mutedText }}
+                    value={s.desc}
+                    editable={editable}
+                    multiline={true}
+                    onChange={(newDesc) => onSlideChange?.(updateSlideProcessStep(slide, i, "desc", newDesc))}
+                  />
                 </div>
               ))}
               {/* Connecting line behind steps */}
@@ -301,12 +465,35 @@ export default function SlideRenderer({
             <div className="flex-1 flex gap-[3cqw]">
               {slide.content.columns?.map((col, i: number) => (
                 <div key={i} className="flex-1 border-t-[0.5cqw] pt-[2cqw]" style={{ borderColor: i === 0 ? t.colors.accent : t.colors.accent2 }}>
-                  <h3 className="text-[3.2cqw] font-bold mb-[2.5cqw]" style={{ color: t.colors.text, fontFamily: styleHeading.fontFamily }}>{col.heading}</h3>
+                  <InlineEditableText
+                    as="h3"
+                    className="text-[3.2cqw] font-bold mb-[2.5cqw]"
+                    style={{ color: t.colors.text, fontFamily: styleHeading.fontFamily }}
+                    value={col.heading}
+                    editable={editable}
+                    onChange={(newH) => {
+                      const cols = [...(slide.content.columns || [])];
+                      cols[i] = { ...cols[i], heading: newH };
+                      onSlideChange?.({ ...slide, content: { ...slide.content, columns: cols } });
+                    }}
+                  />
                   <ul className="space-y-[1.5cqw] text-[2.5cqw]">
                     {col.bullets?.map((b: string, j: number) => (
                       <li key={j} className="flex gap-[1.5cqw] items-start">
                         <span className="mt-[1cqw] w-[0.7cqw] h-[0.7cqw] shrink-0" style={{ backgroundColor: t.colors.mutedText, ...roundedStyle }} />
-                        <span>{b}</span>
+                        <InlineEditableText
+                          as="span"
+                          value={b}
+                          editable={editable}
+                          multiline={true}
+                          onChange={(newB) => {
+                            const cols = [...(slide.content.columns || [])];
+                            const bullets = [...(cols[i]?.bullets || [])];
+                            bullets[j] = newB;
+                            cols[i] = { ...cols[i], bullets };
+                            onSlideChange?.({ ...slide, content: { ...slide.content, columns: cols } });
+                          }}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -320,13 +507,24 @@ export default function SlideRenderer({
               <div className="flex-1 flex gap-[4cqw] items-center">
                 <div className="w-[58%] flex flex-col justify-center px-[4cqw]">
                   <div className="text-[8cqw] leading-none h-[5cqw] opacity-20" style={{ color: t.colors.accent, fontFamily: styleHeading.fontFamily }}>&quot;</div>
-                  <p className="text-[3.4cqw] font-medium italic mb-[2cqw] leading-relaxed" style={{ color: t.colors.text }}>
-                    {slide.content.quote}
-                  </p>
+                  <InlineEditableText
+                    as="p"
+                    className="text-[3.4cqw] font-medium italic mb-[2cqw] leading-relaxed"
+                    style={{ color: t.colors.text }}
+                    value={slide.content.quote}
+                    editable={editable}
+                    multiline={true}
+                    onChange={(newQ) => onSlideChange?.(updateSlideQuote(slide, "quote", newQ))}
+                  />
                   {slide.content.attribution && (
-                    <p className="text-[2.2cqw] font-bold uppercase tracking-widest" style={{ color: t.colors.mutedText }}>
-                      — {slide.content.attribution}
-                    </p>
+                    <InlineEditableText
+                      as="p"
+                      className="text-[2.2cqw] font-bold uppercase tracking-widest"
+                      style={{ color: t.colors.mutedText }}
+                      value={slide.content.attribution}
+                      editable={editable}
+                      onChange={(newA) => onSlideChange?.(updateSlideQuote(slide, "attribution", newA))}
+                    />
                   )}
                 </div>
                 <div className="w-[42%] h-full relative rounded-xl overflow-hidden shadow-sm" style={{ backgroundColor: t.colors.surface }}>
@@ -345,13 +543,24 @@ export default function SlideRenderer({
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center px-[10cqw]">
                 <div className="text-[10cqw] leading-none h-[6cqw] opacity-20" style={{ color: t.colors.accent, fontFamily: styleHeading.fontFamily }}>&quot;</div>
-                <p className="text-[4.2cqw] font-medium italic mb-[3cqw] leading-relaxed" style={{ color: t.colors.text }}>
-                  {slide.content.quote}
-                </p>
+                <InlineEditableText
+                  as="p"
+                  className="text-[4.2cqw] font-medium italic mb-[3cqw] leading-relaxed"
+                  style={{ color: t.colors.text }}
+                  value={slide.content.quote}
+                  editable={editable}
+                  multiline={true}
+                  onChange={(newQ) => onSlideChange?.(updateSlideQuote(slide, "quote", newQ))}
+                />
                 {slide.content.attribution && (
-                  <p className="text-[2.4cqw] font-bold uppercase tracking-widest" style={{ color: t.colors.mutedText }}>
-                    — {slide.content.attribution}
-                  </p>
+                  <InlineEditableText
+                    as="p"
+                    className="text-[2.4cqw] font-bold uppercase tracking-widest"
+                    style={{ color: t.colors.mutedText }}
+                    value={slide.content.attribution}
+                    editable={editable}
+                    onChange={(newA) => onSlideChange?.(updateSlideQuote(slide, "attribution", newA))}
+                  />
                 )}
               </div>
             )
@@ -371,9 +580,14 @@ export default function SlideRenderer({
                 mutedColor={t.colors.mutedText}
               />
               {slide.content.caption && (
-                <p className="text-center text-[1.8cqw] mt-[1cqw] italic" style={{ color: t.colors.mutedText }}>
-                  {slide.content.caption}
-                </p>
+                <InlineEditableText
+                  as="p"
+                  className="text-center text-[1.8cqw] mt-[1cqw] italic"
+                  style={{ color: t.colors.mutedText }}
+                  value={slide.content.caption}
+                  editable={editable}
+                  onChange={(newC) => onSlideChange?.({ ...slide, content: { ...slide.content, caption: newC } })}
+                />
               )}
             </div>
           )}
@@ -401,24 +615,40 @@ export default function SlideRenderer({
               </div>
               <div className="w-1/2 flex flex-col justify-center gap-[2cqw]">
                 {slide.content.heading && (
-                  <h3 className="text-[3.2cqw] font-bold leading-tight" style={styleHeading}>
-                    {slide.content.heading}
-                  </h3>
+                  <InlineEditableText
+                    as="h3"
+                    className="text-[3.2cqw] font-bold leading-tight"
+                    style={styleHeading}
+                    value={slide.content.heading}
+                    editable={editable}
+                    onChange={(newH) => onSlideChange?.(updateSlideImageHeadingOrCaption(slide, "heading", newH))}
+                  />
                 )}
                 {slide.content.bullets && (
                   <ul className="space-y-[1.5cqw] text-[2.5cqw]">
                     {slide.content.bullets.map((b: string, idx: number) => (
                       <li key={idx} className="flex gap-[1.5cqw] items-start">
                         <span className="mt-[1cqw] w-[0.7cqw] h-[0.7cqw] shrink-0" style={{ backgroundColor: t.colors.accent, ...roundedStyle }} />
-                        <span>{b}</span>
+                        <InlineEditableText
+                          as="span"
+                          value={b}
+                          editable={editable}
+                          multiline={true}
+                          onChange={(newB) => onSlideChange?.(updateSlideBullet(slide, idx, newB))}
+                        />
                       </li>
                     ))}
                   </ul>
                 )}
                 {slide.content.caption && (
-                  <p className="text-[2.2cqw] italic leading-relaxed" style={{ color: t.colors.mutedText }}>
-                    {slide.content.caption}
-                  </p>
+                  <InlineEditableText
+                    as="p"
+                    className="text-[2.2cqw] italic leading-relaxed"
+                    style={{ color: t.colors.mutedText }}
+                    value={slide.content.caption}
+                    editable={editable}
+                    onChange={(newC) => onSlideChange?.(updateSlideImageHeadingOrCaption(slide, "caption", newC))}
+                  />
                 )}
               </div>
             </div>
@@ -437,13 +667,22 @@ export default function SlideRenderer({
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20 flex flex-col justify-end p-[6cqw]">
-            <h1 className="text-[5.5cqw] font-black text-white leading-tight mb-[2cqw]">
-              {slide.title}
-            </h1>
+            <InlineEditableText
+              as="h1"
+              className="text-[5.5cqw] font-black text-white leading-tight mb-[2cqw]"
+              value={slide.title}
+              editable={editable}
+              onChange={(newTitle) => onSlideChange?.(updateSlideTitle(slide, newTitle))}
+            />
             {slide.content.caption && (
-              <p className="text-[2.8cqw] text-white/90 max-w-2xl leading-relaxed">
-                {slide.content.caption}
-              </p>
+              <InlineEditableText
+                as="p"
+                className="text-[2.8cqw] text-white/90 max-w-2xl leading-relaxed"
+                value={slide.content.caption}
+                editable={editable}
+                multiline={true}
+                onChange={(newC) => onSlideChange?.(updateSlideImageHeadingOrCaption(slide, "caption", newC))}
+              />
             )}
             {slide.content.photographer && (
               <div className="mt-[2cqw] text-[1.4cqw] text-white/60">
@@ -464,15 +703,24 @@ export default function SlideRenderer({
               className="w-full h-full object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center text-center px-[10cqw]">
+          <div className="absolute inset-0 bg-black/45 bg-gradient-to-t from-black/90 via-black/60 to-black/40 flex flex-col items-center justify-center text-center px-[10cqw]">
             <div className="text-[10cqw] leading-none h-[6cqw] text-white/30" style={{ fontFamily: styleHeading.fontFamily }}>&quot;</div>
-            <p className="text-[4.2cqw] font-medium italic mb-[3cqw] leading-relaxed text-white max-w-4xl">
-              {slide.content.quote}
-            </p>
+            <InlineEditableText
+              as="p"
+              className="text-[4.2cqw] font-medium italic mb-[3cqw] leading-relaxed text-white max-w-4xl"
+              value={slide.content.quote || slide.title}
+              editable={editable}
+              multiline={true}
+              onChange={(newQ) => onSlideChange?.(updateSlideQuote(slide, "quote", newQ))}
+            />
             {slide.content.attribution && (
-              <p className="text-[2.4cqw] font-bold uppercase tracking-widest text-white/80">
-                — {slide.content.attribution}
-              </p>
+              <InlineEditableText
+                as="p"
+                className="text-[2.4cqw] font-bold uppercase tracking-widest text-white/80"
+                value={slide.content.attribution}
+                editable={editable}
+                onChange={(newA) => onSlideChange?.(updateSlideQuote(slide, "attribution", newA))}
+              />
             )}
             {slide.content.photographer && (
               <div className="absolute bottom-2 right-3 text-white/60 text-[1.1cqw]">
@@ -497,13 +745,22 @@ export default function SlideRenderer({
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/35 flex flex-col items-center justify-center text-center px-[10cqw]">
-                <h1 className="text-[6cqw] font-extrabold leading-tight mb-[3cqw] text-white">
-                  {slide.content.headline}
-                </h1>
+                <InlineEditableText
+                  as="h1"
+                  className="text-[6cqw] font-extrabold leading-tight mb-[3cqw] text-white"
+                  value={slide.content.headline}
+                  editable={editable}
+                  onChange={(newH) => onSlideChange?.(updateSlideClosing(slide, "headline", newH))}
+                />
                 {slide.content.cta && (
-                  <div className="px-[4cqw] py-[2cqw] text-[3cqw] font-bold shadow-lg" style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}>
-                    {slide.content.cta}
-                  </div>
+                  <InlineEditableText
+                    as="div"
+                    className="px-[4cqw] py-[2cqw] text-[3cqw] font-bold shadow-lg"
+                    style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}
+                    value={slide.content.cta}
+                    editable={editable}
+                    onChange={(newC) => onSlideChange?.(updateSlideClosing(slide, "cta", newC))}
+                  />
                 )}
                 {slide.content.photographer && (
                   <div className="absolute bottom-2 right-3 text-white/50 text-[1.2cqw]">
@@ -519,13 +776,23 @@ export default function SlideRenderer({
           return (
             <div className="absolute inset-0 flex">
               <div className="w-1/2 flex flex-col justify-center items-start px-[8cqw]">
-                <h1 className="text-[5.5cqw] font-extrabold leading-tight mb-[3cqw]" style={styleHeading}>
-                  {slide.content.headline}
-                </h1>
+                <InlineEditableText
+                  as="h1"
+                  className="text-[5.5cqw] font-extrabold leading-tight mb-[3cqw]"
+                  style={styleHeading}
+                  value={slide.content.headline}
+                  editable={editable}
+                  onChange={(newH) => onSlideChange?.(updateSlideClosing(slide, "headline", newH))}
+                />
                 {slide.content.cta && (
-                  <div className="px-[4cqw] py-[2cqw] text-[2.8cqw] font-bold shadow-md" style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}>
-                    {slide.content.cta}
-                  </div>
+                  <InlineEditableText
+                    as="div"
+                    className="px-[4cqw] py-[2cqw] text-[2.8cqw] font-bold shadow-md"
+                    style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}
+                    value={slide.content.cta}
+                    editable={editable}
+                    onChange={(newC) => onSlideChange?.(updateSlideClosing(slide, "cta", newC))}
+                  />
                 )}
               </div>
               <div className="w-1/2 flex items-center justify-center p-[5cqw]">
@@ -548,13 +815,23 @@ export default function SlideRenderer({
 
         return (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-[10cqw]">
-            <h1 className="text-[6cqw] font-extrabold leading-tight mb-[3cqw]" style={styleHeading}>
-              {slide.content.headline}
-            </h1>
+            <InlineEditableText
+              as="h1"
+              className="text-[6cqw] font-extrabold leading-tight mb-[3cqw]"
+              style={styleHeading}
+              value={slide.content.headline}
+              editable={editable}
+              onChange={(newH) => onSlideChange?.(updateSlideClosing(slide, "headline", newH))}
+            />
             {slide.content.cta && (
-              <div className="px-[4cqw] py-[2cqw] text-[3cqw] font-bold" style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}>
-                {slide.content.cta}
-              </div>
+              <InlineEditableText
+                as="div"
+                className="px-[4cqw] py-[2cqw] text-[3cqw] font-bold"
+                style={{ backgroundColor: t.colors.accent, color: t.colors.bg, ...roundedStyle }}
+                value={slide.content.cta}
+                editable={editable}
+                onChange={(newC) => onSlideChange?.(updateSlideClosing(slide, "cta", newC))}
+              />
             )}
           </div>
         );

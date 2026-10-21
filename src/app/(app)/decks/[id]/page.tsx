@@ -25,11 +25,29 @@ import {
   Search,
   X,
   ShieldCheck,
+  Copy,
+  Layout,
+  Share2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { OutlineSection, ISlide } from "@/app/models/Deck";
 import SlideRenderer from "@/components/app/SlideRenderer";
 import DeckEditorSkeleton from "@/components/app/DeckEditorSkeleton";
 import { toast } from "sonner";
+import { buildSourceCitation } from "@/lib/slides-schema";
+import { applyNotesUpdate, shouldSyncNotesFromProps } from "@/lib/notes-sync";
+import {
+  createDefaultSlide,
+  duplicateSlide,
+  deleteSlide,
+  reorderSlides,
+  switchSlideLayout,
+  MAX_DECK_SLIDES,
+  LAYOUT_OPTIONS,
+  ReorderDebounceManager,
+} from "@/lib/slide-mutations";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +61,16 @@ interface DeckData {
   slides: ISlide[];
   error?: string;
   hasSourceText?: boolean;
+  slidesDone?: number;
+  slidesTotal?: number;
+  updatedAt?: string | Date;
+  version?: number;
+  share?: {
+    enabled: boolean;
+    slug?: string;
+    createdAt?: string | Date;
+    revokedAt?: string | Date;
+  };
   outlineProgress?: {
     stage?: string;
     chunksDone: number;
@@ -86,8 +114,15 @@ export default function DeckEditorPage({
   const [title, setTitle] = useState("");
   const [theme, setTheme] = useState("modern");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [generatingInAnotherTab, setGeneratingInAnotherTab] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const deckUpdatedAtRef = useRef<string | Date | null>(null);
+  const deckVersionRef = useRef<number | null>(null);
+  const activeSaveCountRef = useRef(0);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const [viewMode, setViewMode] = useState<"outline" | "slides">("outline");
@@ -96,8 +131,22 @@ export default function DeckEditorPage({
   // Right Panel Tabs
   const [panelTab, setPanelTab] = useState<"edit" | "chat">("edit");
   
+  // Slide Management & Reorder State
+  const [showAddSlideMenu, setShowAddSlideMenu] = useState(false);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [reorderAnnouncement, setReorderAnnouncement] = useState("");
+  const reorderManagerRef = useRef<ReorderDebounceManager | null>(null);
+
+  // Present Mode & Share State
+  const [isPresenting, setIsPresenting] = useState(false);
+  const [showSpeakerNotesInPresent, setShowSpeakerNotesInPresent] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+
   // Edit Tab State
   const [regenInstruction, setRegenInstruction] = useState("");
+  const [regenNote, setRegenNote] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [imageSearchQuery, setImageSearchQuery] = useState("");
   const [imageSearchResults, setImageSearchResults] = useState<
@@ -172,6 +221,8 @@ export default function DeckEditorPage({
       setTheme(d.theme);
       setOutline(d.outline ?? []);
       setSlides(d.slides ?? []);
+      if (d.updatedAt) deckUpdatedAtRef.current = d.updatedAt;
+      if (d.version !== undefined) deckVersionRef.current = d.version;
       // Recover stuck states with no slides
       if (!d.slides || d.slides.length === 0) {
         if (d.status === "generating" || d.status === "ready") {
@@ -244,22 +295,135 @@ export default function DeckEditorPage({
   }, [deckId, deck?.status, deck?.outlineProgress?.chunksDone]);
 
 
+  // ── Resumable Client-Driven Slide Generation Stepper ────────────────────────
+  const drivingSlideGenRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const inProgressCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!deckId || !deck || deck.status !== "generating" || batchError) {
+      drivingSlideGenRef.current = false;
+      return;
+    }
+    if (drivingSlideGenRef.current) return;
+
+    drivingSlideGenRef.current = true;
+    let isMounted = true;
+
+    const driveNextSlideBatch = async () => {
+      try {
+        const res = await fetch(`/api/decks/${deckId}/generate`, { method: "POST" });
+        if (!isMounted) return;
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          // If server failed (5xx) or error returned, retry up to 3 times with backoff (2s, 5s, 10s)
+          if (retryCountRef.current < 3) {
+            const delays = [2000, 5000, 10000];
+            const delay = delays[retryCountRef.current] || 10000;
+            retryCountRef.current += 1;
+            console.warn(
+              `[SlideGen] Batch failed (${res.status}), retrying in ${delay}ms (attempt ${retryCountRef.current}/3)…`
+            );
+            await new Promise((r) => setTimeout(r, delay));
+            drivingSlideGenRef.current = false;
+            if (isMounted) setRetryTrigger((prev) => prev + 1);
+            return;
+          }
+
+          setBatchError(
+            body.error || "Slide generation paused due to a server error. Progress is saved."
+          );
+          const d = await fetchDeck(deckId);
+          if (d && isMounted) setDeck(d);
+          return;
+        }
+
+        const data = await res.json();
+        if (!isMounted) return;
+
+        // Reset errors and retry counter on success
+        retryCountRef.current = 0;
+        setBatchError(null);
+
+        if (data.inProgress) {
+          inProgressCountRef.current += 1;
+          if (inProgressCountRef.current >= 2) {
+            setGeneratingInAnotherTab(true);
+          }
+          await new Promise((r) => setTimeout(r, 2500));
+        } else {
+          inProgressCountRef.current = 0;
+          setGeneratingInAnotherTab(false);
+        }
+
+        if (data.slides) {
+          setSlides(data.slides);
+        }
+
+        if (data.status === "ready") {
+          const d = await fetchDeck(deckId);
+          if (d && isMounted) {
+            setDeck(d);
+            setSlides(d.slides ?? []);
+            setTitle(d.title);
+            setOutline(d.outline ?? []);
+          }
+        } else if (data.status === "generating") {
+          setDeck((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "generating",
+                  slidesDone: data.slidesDone,
+                  slidesTotal: data.slidesTotal,
+                  slides: data.slides || prev.slides,
+                }
+              : null
+          );
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Slide batch generation step network error:", err);
+        if (retryCountRef.current < 3) {
+          const delays = [2000, 5000, 10000];
+          const delay = delays[retryCountRef.current] || 10000;
+          retryCountRef.current += 1;
+          console.warn(
+            `[SlideGen] Network error, retrying in ${delay}ms (attempt ${retryCountRef.current}/3)…`
+          );
+          await new Promise((r) => setTimeout(r, delay));
+          drivingSlideGenRef.current = false;
+          if (isMounted) setRetryTrigger((prev) => prev + 1);
+          return;
+        }
+        setBatchError("Network connection interrupted. Your progress is saved.");
+      } finally {
+        drivingSlideGenRef.current = false;
+      }
+    };
+
+    driveNextSlideBatch();
+
+    return () => {
+      isMounted = false;
+      drivingSlideGenRef.current = false;
+    };
+  }, [deckId, deck?.status, deck?.slidesDone, deck?.slides?.length, batchError, retryTrigger, fetchDeck]);
+
   // ── Generate slides ──────────────────────────────────────────────────────────
 
   const generateSlides = async () => {
     if (!deckId || !deck) return;
     if (saveStatus === "saving") await new Promise(r => setTimeout(r, 1000));
 
+    setBatchError(null);
+    setGeneratingInAnotherTab(false);
+    retryCountRef.current = 0;
+    inProgressCountRef.current = 0;
+    drivingSlideGenRef.current = false;
     setDeck({ ...deck, status: "generating", error: "" });
     setViewMode("slides");
-    fetch(`/api/decks/${deckId}/generate`, { method: "POST" })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json();
-          setLoadError(body.error || "Generation failed");
-        }
-      })
-      .catch(() => {});
   };
 
   // ── AI Chat Submit ───────────────────────────────────────────────────────────
@@ -297,18 +461,421 @@ export default function DeckEditorPage({
     }
   };
 
-  // ── Undo ─────────────────────────────────────────────────────────────────────
+  // ── Undo & Canvas Editing ───────────────────────────────────────────────────
+  const clientUndoStackRef = useRef<{ slides: ISlide[]; theme: string }[]>([]);
+
+  const isInlineEditorFocused = () => {
+    if (typeof document === "undefined") return false;
+    const active = document.activeElement;
+    if (!active) return false;
+    const tag = active.tagName.toLowerCase();
+    return (
+      tag === "input" ||
+      tag === "textarea" ||
+      active.getAttribute("contenteditable") === "true" ||
+      Boolean(active.closest("[contenteditable='true']"))
+    );
+  };
+
+  const commitSlidesUpdate = useCallback(
+    async (newSlides: ISlide[], actionToast?: string) => {
+      if (!deckId) return;
+
+      // Push current state to undo history
+      clientUndoStackRef.current.push({
+        slides: [...slidesRef.current],
+        theme,
+      });
+      if (clientUndoStackRef.current.length > 10) {
+        clientUndoStackRef.current.shift();
+      }
+
+      setSlides(newSlides);
+      slidesRef.current = newSlides;
+
+      setSaveStatus("saving");
+      activeSaveCountRef.current++;
+
+      try {
+        const res = await fetch(`/api/decks/${deckId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slides: newSlides,
+            expectedUpdatedAt: deckUpdatedAtRef.current,
+            version: deckVersionRef.current,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data.updatedAt) deckUpdatedAtRef.current = data.updatedAt;
+          if (data.version !== undefined) deckVersionRef.current = data.version;
+          setSaveStatus("saved");
+          if (actionToast) toast.success(actionToast);
+          setTimeout(() => setSaveStatus("idle"), 1500);
+        } else if (res.status === 409) {
+          toast.error("Stale write detected. Deck has been modified elsewhere; reloading latest content.");
+          const d = await fetchDeck(deckId);
+          if (d) {
+            setDeck(d);
+            setSlides(d.slides ?? []);
+            slidesRef.current = d.slides ?? [];
+            if (d.updatedAt) deckUpdatedAtRef.current = d.updatedAt;
+            if (d.version !== undefined) deckVersionRef.current = d.version;
+          }
+          setSaveStatus("idle");
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          toast.error(errData.error || "Failed to save slide update.");
+          setSaveStatus("idle");
+        }
+      } catch (err: any) {
+        toast.error(err?.message || "Network error while saving.");
+        setSaveStatus("idle");
+      } finally {
+        activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
+      }
+    },
+    [deckId, theme, fetchDeck]
+  );
+
+  const flushPendingReorder = useCallback(() => {
+    reorderManagerRef.current?.flush();
+  }, []);
+
+  useEffect(() => {
+    reorderManagerRef.current = new ReorderDebounceManager((slidesToCommit) => {
+      commitSlidesUpdate(slidesToCommit);
+    }, 500);
+
+    const handleBeforeUnload = () => {
+      reorderManagerRef.current?.flush();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      reorderManagerRef.current?.flush();
+    };
+  }, [commitSlidesUpdate]);
+
+  const handleCanvasSlideChange = useCallback(
+    (updatedSlide: ISlide) => {
+      if (!deckId || !slides[activeSlideIdx]) return;
+      flushPendingReorder();
+
+      // Push current state to undo history
+      clientUndoStackRef.current.push({
+        slides: [...slides],
+        theme,
+      });
+      if (clientUndoStackRef.current.length > 10) {
+        clientUndoStackRef.current.shift();
+      }
+
+      const updated = [...slides];
+      updated[activeSlideIdx] = updatedSlide;
+      setSlides(updated);
+      slidesRef.current = updated;
+
+      setSaveStatus("saving");
+      activeSaveCountRef.current++;
+      fetch(`/api/decks/${deckId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slideIndex: activeSlideIdx,
+          slide: updatedSlide,
+          expectedUpdatedAt: deckUpdatedAtRef.current,
+          version: deckVersionRef.current,
+        }),
+      })
+        .then(async (r) => {
+          if (r.ok) {
+            const data = await r.json().catch(() => ({}));
+            if (data.updatedAt) deckUpdatedAtRef.current = data.updatedAt;
+            if (data.version !== undefined) deckVersionRef.current = data.version;
+            setSaveStatus("saved");
+            setTimeout(() => setSaveStatus("idle"), 1500);
+          } else if (r.status === 409) {
+            toast.error("Stale write detected. Deck has been modified elsewhere; reloading latest content.");
+            const d = await fetchDeck(deckId);
+            if (d) {
+              setDeck(d);
+              setSlides(d.slides ?? []);
+              slidesRef.current = d.slides ?? [];
+              if (d.updatedAt) deckUpdatedAtRef.current = d.updatedAt;
+              if (d.version !== undefined) deckVersionRef.current = d.version;
+            }
+            setSaveStatus("idle");
+          } else {
+            setSaveStatus("idle");
+          }
+        })
+        .catch(() => setSaveStatus("idle"))
+        .finally(() => {
+          activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
+        });
+    },
+    [deckId, slides, activeSlideIdx, theme, fetchDeck]
+  );
+
+  const handleAddSlide = (layout: string) => {
+    flushPendingReorder();
+    if (slides.length >= MAX_DECK_SLIDES) {
+      toast.error(`Deck cannot exceed maximum of ${MAX_DECK_SLIDES} slides.`);
+      return;
+    }
+    const newSlide = createDefaultSlide(layout);
+    const updated = [...slides];
+    const insertIdx = activeSlideIdx + 1 <= updated.length ? activeSlideIdx + 1 : updated.length;
+    updated.splice(insertIdx, 0, newSlide as any);
+    setActiveSlideIdx(insertIdx);
+    setShowAddSlideMenu(false);
+    setReorderAnnouncement(`Added ${layout} slide at position ${insertIdx + 1} of ${updated.length}`);
+    commitSlidesUpdate(updated, "New slide added.");
+  };
+
+  const handleDuplicateSlide = (e: React.MouseEvent, idx: number) => {
+    e.stopPropagation();
+    flushPendingReorder();
+    try {
+      const { updated, newIndex } = duplicateSlide(slides as any, idx);
+      setActiveSlideIdx(newIndex);
+      setReorderAnnouncement(`Duplicated slide to position ${newIndex + 1} of ${updated.length}`);
+      commitSlidesUpdate(updated as any, "Slide duplicated.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to duplicate slide.");
+    }
+  };
+
+  const handleDeleteSlide = (e: React.MouseEvent, idx: number) => {
+    e.stopPropagation();
+    flushPendingReorder();
+    try {
+      const { updated, newIndex } = deleteSlide(slides as any, idx);
+      setActiveSlideIdx(newIndex);
+      setReorderAnnouncement(`Deleted slide. Active slide is now position ${newIndex + 1} of ${updated.length}`);
+      commitSlidesUpdate(updated as any, "Slide deleted.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete slide.");
+    }
+  };
+
+  const handleLayoutSwitch = (targetLayout: string) => {
+    flushPendingReorder();
+    const current = slides[activeSlideIdx];
+    if (!current || current.layout === targetLayout) return;
+    const switched = switchSlideLayout(current as any, targetLayout);
+    const updated = [...slides];
+    updated[activeSlideIdx] = switched as any;
+    commitSlidesUpdate(updated, `Switched layout to ${targetLayout.replace("_", " ")}.`);
+  };
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragOverIdx !== idx) {
+      setDragOverIdx(idx);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    flushPendingReorder();
+    const sourceIdx = draggedIdx;
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+    if (sourceIdx === null || sourceIdx === targetIdx) return;
+
+    const reordered = reorderSlides(slides as any, sourceIdx, targetIdx);
+    setActiveSlideIdx(targetIdx);
+    setReorderAnnouncement(`Moved slide to position ${targetIdx + 1} of ${reordered.length}`);
+    commitSlidesUpdate(reordered as any);
+  };
+
+  const handleMoveSlide = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      if (toIdx < 0 || toIdx >= slidesRef.current.length || fromIdx === toIdx) return;
+      const reordered = reorderSlides(slidesRef.current as any, fromIdx, toIdx);
+      setSlides(reordered as any);
+      slidesRef.current = reordered as any;
+      setActiveSlideIdx(toIdx);
+      setReorderAnnouncement(`Moved slide to position ${toIdx + 1} of ${reordered.length}`);
+
+      // Debounce commit (~500ms) for keyboard accessibility
+      reorderManagerRef.current?.schedule(reordered as any);
+    },
+    []
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+      if (isInlineEditorFocused()) return;
+
+      e.preventDefault();
+      const currentIdx = activeSlideIdx;
+      const targetIdx = e.key === "ArrowUp" ? currentIdx - 1 : currentIdx + 1;
+      handleMoveSlide(currentIdx, targetIdx);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeSlideIdx, handleMoveSlide]);
 
   const handleUndo = async () => {
+    if (!deckId) return;
+    flushPendingReorder();
+    // If we have a local client snapshot, restore it immediately for instant responsiveness
+    if (clientUndoStackRef.current.length > 0) {
+      const prev = clientUndoStackRef.current.pop()!;
+      setSlides(prev.slides);
+      setTheme(prev.theme);
+      slidesRef.current = prev.slides;
+      toast.success("Change undone.");
+      if (deckId) {
+        fetch(`/api/decks/${deckId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slides: prev.slides,
+            theme: prev.theme,
+            expectedUpdatedAt: deckUpdatedAtRef.current,
+            version: deckVersionRef.current,
+          }),
+        })
+          .then(async (r) => {
+            if (r.ok) {
+              const data = await r.json().catch(() => ({}));
+              if (data.updatedAt) deckUpdatedAtRef.current = data.updatedAt;
+              if (data.version !== undefined) deckVersionRef.current = data.version;
+            } else if (r.status === 409) {
+              toast.error("Stale write detected. Reloading latest content.");
+              const d = await fetchDeck(deckId);
+              if (d) {
+                setDeck(d);
+                setSlides(d.slides ?? []);
+                slidesRef.current = d.slides ?? [];
+              }
+            }
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
     try {
       const res = await fetch(`/api/decks/${deckId}/undo`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setSlides(data.slides);
       setTheme(data.theme);
+      slidesRef.current = data.slides;
+      const refreshed = await fetchDeck(deckId);
+      if (refreshed) {
+        if (refreshed.updatedAt) deckUpdatedAtRef.current = refreshed.updatedAt;
+        if (refreshed.version !== undefined) deckVersionRef.current = refreshed.version;
+      }
       toast.success("Change undone.");
     } catch (err: any) {
       toast.error(err.message || "Undo failed.");
+    }
+  };
+
+  // ── Present Mode & Fullscreen Sync ──────────────────────────────────────────
+  const handleEnterPresentMode = async () => {
+    flushPendingReorder();
+    if (pendingNotesSaveRef.current) {
+      await flushPendingNotes();
+    }
+    setIsPresenting(true);
+    try {
+      if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Inline fullscreen fallback
+    }
+  };
+
+  const handleExitPresentMode = useCallback(() => {
+    if (typeof document !== "undefined" && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setIsPresenting(false);
+  }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (typeof document !== "undefined" && !document.fullscreenElement && isPresenting) {
+        setIsPresenting(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, [isPresenting]);
+
+  useEffect(() => {
+    if (!isPresenting) return;
+    const handlePresentKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown" || e.key === "Enter") {
+        e.preventDefault();
+        setActiveSlideIdx((prev) => Math.min(slides.length - 1, prev + 1));
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp" || e.key === "Backspace") {
+        e.preventDefault();
+        setActiveSlideIdx((prev) => Math.max(0, prev - 1));
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        handleExitPresentMode();
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        setShowSpeakerNotesInPresent((prev) => !prev);
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        if (typeof document !== "undefined") {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handlePresentKeyDown);
+    return () => window.removeEventListener("keydown", handlePresentKeyDown);
+  }, [isPresenting, slides.length, handleExitPresentMode]);
+
+  // ── Share Link Toggle ────────────────────────────────────────────────────────
+  const handleToggleShare = async () => {
+    if (!deckId || shareLoading) return;
+    setShareLoading(true);
+    try {
+      if (deck?.share?.enabled) {
+        // Revoke
+        const res = await fetch(`/api/decks/${deckId}/share`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to revoke share link.");
+        setDeck((prev) => (prev ? { ...prev, share: { enabled: false } } : null));
+        toast.success("Share link revoked. Access has been removed immediately.");
+      } else {
+        // Enable with brand-new slug
+        const res = await fetch(`/api/decks/${deckId}/share`, { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to generate share link.");
+        setDeck((prev) => (prev ? { ...prev, share: { enabled: true, slug: data.slug } } : null));
+        toast.success("Public share link created!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update share settings.");
+    } finally {
+      setShareLoading(false);
     }
   };
 
@@ -333,7 +900,13 @@ export default function DeckEditorPage({
       newSlides[activeSlideIdx] = data.slide;
       setSlides(newSlides);
       setRegenInstruction("");
-      toast.success("Slide regenerated!");
+      if (data.note) {
+        setRegenNote(data.note);
+        toast.info(data.note, { duration: 6000 });
+      } else {
+        setRegenNote(null);
+        toast.success("Slide regenerated!");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to regenerate slide.");
     } finally {
@@ -366,6 +939,139 @@ export default function DeckEditorPage({
     } catch {
       setSaveStatus("idle");
     }
+  };
+
+  // ── Speaker notes editing & autosave ─────────────────────────────────────────
+  const [notesText, setNotesText] = useState("");
+  const [isNotesFocused, setIsNotesFocused] = useState(false);
+  const lastSyncedSlideIdRef = useRef<string | null>(null);
+  const prevActiveSlideIdRef = useRef<string | null>(null);
+  const pendingNotesSaveRef = useRef<{ slideId: string; notes: string } | null>(null);
+  const notesSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
+
+  const flushPendingNotes = useCallback(async () => {
+    if (notesSaveTimeoutRef.current) {
+      clearTimeout(notesSaveTimeoutRef.current);
+      notesSaveTimeoutRef.current = null;
+    }
+    const pending = pendingNotesSaveRef.current;
+    if (!pending || !pending.slideId) return;
+
+    pendingNotesSaveRef.current = null;
+
+    const currentSlides = slidesRef.current;
+    const { updatedSlides, updated } = applyNotesUpdate(
+      currentSlides,
+      pending.slideId,
+      pending.notes
+    );
+
+    if (!updated || !deckId) return;
+
+    setSlides(updatedSlides);
+    slidesRef.current = updatedSlides;
+    setSaveStatus("saving");
+    activeSaveCountRef.current++;
+
+    try {
+      const res = await fetch(`/api/decks/${deckId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slides: updatedSlides,
+          expectedUpdatedAt: deckUpdatedAtRef.current,
+          version: deckVersionRef.current,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.updatedAt) deckUpdatedAtRef.current = data.updatedAt;
+        if (data.version !== undefined) deckVersionRef.current = data.version;
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 1500);
+      } else if (res.status === 409) {
+        toast.error("Stale write detected. Deck has been modified elsewhere; reloading latest content.");
+        const d = await fetchDeck(deckId);
+        if (d) {
+          setDeck(d);
+          setSlides(d.slides ?? []);
+          slidesRef.current = d.slides ?? [];
+          if (d.updatedAt) deckUpdatedAtRef.current = d.updatedAt;
+          if (d.version !== undefined) deckVersionRef.current = d.version;
+        }
+        setSaveStatus("idle");
+      } else {
+        const errData = await res.json().catch(() => null);
+        if (errData?.error) {
+          toast.error(errData.error);
+        }
+        setSaveStatus("idle");
+      }
+    } catch {
+      setSaveStatus("idle");
+    } finally {
+      activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
+    }
+  }, [deckId]);
+
+  // Sync from props only when the slide id changes or the textarea is not focused;
+  // flush pending notes if active slide changes.
+  useEffect(() => {
+    const currentSlide = slides[activeSlideIdx];
+    const currentSlideId = currentSlide?.id;
+
+    if (prevActiveSlideIdRef.current && prevActiveSlideIdRef.current !== currentSlideId) {
+      if (pendingNotesSaveRef.current && pendingNotesSaveRef.current.slideId === prevActiveSlideIdRef.current) {
+        flushPendingNotes();
+      }
+    }
+    prevActiveSlideIdRef.current = currentSlideId || null;
+
+    const shouldSync = shouldSyncNotesFromProps({
+      currentSlideId,
+      lastSyncedSlideId: lastSyncedSlideIdRef.current || undefined,
+      isTextareaFocused: isNotesFocused,
+    });
+
+    if (shouldSync) {
+      setNotesText(currentSlide?.notes || "");
+      lastSyncedSlideIdRef.current = currentSlideId || null;
+    }
+  }, [activeSlideIdx, slides[activeSlideIdx]?.id, slides[activeSlideIdx]?.notes, isNotesFocused, flushPendingNotes]);
+
+  useEffect(() => {
+    return () => {
+      if (notesSaveTimeoutRef.current) clearTimeout(notesSaveTimeoutRef.current);
+      flushPendingNotes();
+    };
+  }, [flushPendingNotes]);
+
+  const handleNotesChange = (val: string) => {
+    const currentSlideId = slides[activeSlideIdx]?.id;
+    setNotesText(val);
+
+    if (!currentSlideId) return;
+
+    // Capture slide id when typing starts
+    pendingNotesSaveRef.current = { slideId: currentSlideId, notes: val };
+
+    if (notesSaveTimeoutRef.current) {
+      clearTimeout(notesSaveTimeoutRef.current);
+    }
+    notesSaveTimeoutRef.current = setTimeout(() => {
+      flushPendingNotes();
+    }, 600);
+  };
+
+  const handleNotesFocus = () => {
+    setIsNotesFocused(true);
+  };
+
+  const handleNotesBlur = () => {
+    setIsNotesFocused(false);
+    flushPendingNotes();
   };
 
   const handleSearchImages = async (q: string) => {
@@ -560,12 +1266,24 @@ export default function DeckEditorPage({
           )}
 
           {viewMode === "slides" && slides.length > 0 && (
-            <button
+            <>
+              <button
               onClick={async () => {
                 if (!deckId || isExporting) return;
                 setIsExporting(true);
-                const toastId = toast.loading("Preparing PowerPoint export...");
+                const toastId = toast.loading("Saving changes and preparing PowerPoint export...");
                 try {
+                  // Ensure export waits for pending speaker notes or canvas saves
+                  if (pendingNotesSaveRef.current) {
+                    await flushPendingNotes();
+                  }
+
+                  let waitAttempts = 0;
+                  while ((activeSaveCountRef.current > 0 || saveStatus === "saving") && waitAttempts < 25) {
+                    await new Promise((r) => setTimeout(r, 200));
+                    waitAttempts++;
+                  }
+
                   const res = await fetch(`/api/decks/${deckId}/export`);
                   if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
@@ -606,6 +1324,83 @@ export default function DeckEditorPage({
                 </>
               )}
             </button>
+            <button
+              onClick={async () => {
+                if (!deckId || isExportingPdf || isExporting) return;
+                setIsExportingPdf(true);
+                const toastId = toast.loading("Rendering presentation and generating PDF...");
+                try {
+                  if (pendingNotesSaveRef.current) {
+                    await flushPendingNotes();
+                  }
+
+                  let waitAttempts = 0;
+                  while ((activeSaveCountRef.current > 0 || saveStatus === "saving") && waitAttempts < 25) {
+                    await new Promise((r) => setTimeout(r, 200));
+                    waitAttempts++;
+                  }
+
+                  const res = await fetch(`/api/decks/${deckId}/export/pdf`, {
+                    method: "POST",
+                  });
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || "Failed to generate PDF");
+                  }
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  const cd = res.headers.get("Content-Disposition");
+                  let filename = "Presentation.pdf";
+                  if (cd) {
+                    const match = cd.match(/filename="([^"]+)"/);
+                    if (match) filename = match[1];
+                  }
+                  a.download = filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.URL.revokeObjectURL(url);
+                  toast.success("PDF document downloaded!", { id: toastId });
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to export PDF.", { id: toastId });
+                } finally {
+                  setIsExportingPdf(false);
+                }
+              }}
+              disabled={isExportingPdf || isExporting}
+              title="Export as PDF Document"
+              aria-label="Export PDF"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 transition shadow-sm"
+            >
+              {isExportingPdf ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Generating PDF...
+                </>
+              ) : (
+                <>
+                  <FileText size={16} /> Export PDF
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleEnterPresentMode}
+              title="Present Fullscreen"
+              aria-label="Present Fullscreen"
+              className="flex items-center gap-1.5 rounded-xl border border-[#101A3A]/15 bg-white px-3.5 py-2 text-sm font-semibold text-[#101A3A] hover:bg-[#F4F6FB] transition shadow-sm"
+            >
+              <PlaySquare size={16} className="text-[#2F5BFF]" /> Present
+            </button>
+            <button
+              onClick={() => setShowShareModal(true)}
+              title="Share Presentation"
+              aria-label="Share Presentation"
+              className="flex items-center gap-1.5 rounded-xl border border-[#101A3A]/15 bg-white px-3.5 py-2 text-sm font-semibold text-[#101A3A] hover:bg-[#F4F6FB] transition shadow-sm"
+            >
+              <Share2 size={16} className="text-[#2F5BFF]" /> Share
+            </button>
+            </>
           )}
         </div>
       </div>
@@ -626,7 +1421,37 @@ export default function DeckEditorPage({
         </div>
       )}
 
-      
+      {isGenerating && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#2F5BFF]/20 bg-[#2F5BFF]/5 px-4 py-3 text-sm text-[#2F5BFF] mb-6">
+          <Loader2 size={16} className="animate-spin shrink-0" />
+          <span>
+            {generatingInAnotherTab
+              ? "Generating in another tab or window…"
+              : `Generating slide ${Math.min((deck.slidesDone ?? slides.length) + 1, deck.slidesTotal || outline.length || 1)} of ${deck.slidesTotal || outline.length || 1}…`}
+          </span>
+        </div>
+      )}
+
+      {batchError && isGenerating && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-6">
+          <div className="flex items-center gap-2.5 text-sm text-amber-800">
+            <AlertCircle size={16} className="shrink-0 text-amber-600" />
+            <span>{batchError}</span>
+          </div>
+          <button
+            onClick={() => {
+              setBatchError(null);
+              retryCountRef.current = 0;
+              drivingSlideGenRef.current = false;
+              setRetryTrigger((prev) => prev + 1);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2F5BFF] text-white text-xs font-semibold hover:bg-[#2548cc] transition shadow-sm"
+          >
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
+      )}
+
       {isFailed && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-6">
           <div className="flex items-center gap-2.5 text-sm text-red-600">
@@ -704,31 +1529,136 @@ export default function DeckEditorPage({
           <div className="absolute inset-0 flex gap-6">
             
             {/* Left Rail: Thumbnails */}
-            <div className="w-48 shrink-0 flex flex-col gap-3 overflow-y-auto pr-2 pb-10">
-              {slides.map((slide, idx) => (
-                <button
-                  key={idx} // Some might be null while generating
-                  onClick={() => slide && setActiveSlideIdx(idx)}
-                  className={clsx(
-                    "w-full aspect-video rounded-lg overflow-hidden border-2 text-left transition relative group",
-                    activeSlideIdx === idx ? "border-[#2F5BFF] ring-2 ring-[#2F5BFF]/20" : "border-transparent hover:border-[#101A3A]/20"
-                  )}
-                >
-                  {slide ? (
-                    <SlideRenderer slide={slide as any} theme={theme} className="pointer-events-none" />
-                  ) : (
-                    <div className="absolute inset-0 bg-[#101A3A]/5 flex items-center justify-center">
-                      <Loader2 size={20} className="animate-spin text-[#5a6384]" />
+            <div className="w-56 shrink-0 flex flex-col gap-3 overflow-y-auto pr-2 pb-10">
+              {/* Accessible Live Region for Reorder Announcements */}
+              <div className="sr-only" aria-live="polite" aria-atomic="true">
+                {reorderAnnouncement}
+              </div>
+
+              {/* Rail Header with Add Slide Button */}
+              <div className="flex items-center justify-between pb-1 border-b border-[#101A3A]/10">
+                <span className="text-[11px] font-bold text-[#5a6384] uppercase tracking-wider">
+                  Slides ({slides.length}/{MAX_DECK_SLIDES})
+                </span>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAddSlideMenu((prev) => !prev)}
+                    disabled={isGenerating || isOutlining || slides.length >= MAX_DECK_SLIDES}
+                    aria-label="Add new slide"
+                    className="flex items-center gap-1 text-xs font-semibold px-2 py-1 bg-[#2F5BFF] text-white rounded-md shadow-sm hover:bg-[#2548cc] transition disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#2F5BFF] focus-visible:outline-none"
+                  >
+                    <Plus size={13} /> Add
+                  </button>
+
+                  {/* Layout Picker Dropdown */}
+                  {showAddSlideMenu && (
+                    <div className="absolute left-0 mt-1 w-48 bg-white border border-[#101A3A]/15 rounded-xl shadow-xl z-30 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3 py-1 text-[10px] font-bold uppercase text-[#5a6384] border-b border-[#101A3A]/10">
+                        Choose Layout
+                      </div>
+                      {LAYOUT_OPTIONS.map((item) => (
+                        <button
+                          key={item.value}
+                          onClick={() => handleAddSlide(item.value)}
+                          className="w-full text-left px-3 py-1.5 text-xs text-[#101A3A] hover:bg-[#F4F6FB] hover:text-[#2F5BFF] transition flex items-center justify-between font-medium"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
                     </div>
                   )}
-                  <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 rounded">
-                    {idx + 1}
-                  </div>
-                </button>
+                </div>
+              </div>
+
+              {slides.map((slide, idx) => (
+                <div
+                  key={slide?.id || idx}
+                  draggable={!isGenerating && !isOutlining && Boolean(slide)}
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  className={clsx(
+                    "relative group rounded-lg transition",
+                    dragOverIdx === idx && "ring-2 ring-blue-500 scale-[1.02]"
+                  )}
+                >
+                  <button
+                    onClick={() => slide && setActiveSlideIdx(idx)}
+                    aria-label={`Slide ${idx + 1} of ${slides.length}: ${slide?.title || "Untitled"}`}
+                    className={clsx(
+                      "w-full aspect-video rounded-lg overflow-hidden border-2 text-left transition relative block focus-visible:ring-2 focus-visible:ring-[#2F5BFF] focus-visible:outline-none",
+                      activeSlideIdx === idx
+                        ? "border-[#2F5BFF] ring-2 ring-[#2F5BFF]/20"
+                        : "border-transparent hover:border-[#101A3A]/20"
+                    )}
+                  >
+                    {slide ? (
+                      <SlideRenderer slide={slide as any} theme={theme} className="pointer-events-none" />
+                    ) : (
+                      <div className="absolute inset-0 bg-[#101A3A]/5 flex items-center justify-center">
+                        <Loader2 size={20} className="animate-spin text-[#5a6384]" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 rounded">
+                      {idx + 1}
+                    </div>
+                  </button>
+
+                  {/* Thumbnail Action Buttons (Visible on hover or keyboard focus) */}
+                  {slide && !isGenerating && !isOutlining && (
+                    <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity bg-black/75 backdrop-blur-sm rounded-md p-0.5 z-20 shadow-md">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveSlide(idx, idx - 1);
+                        }}
+                        disabled={idx === 0}
+                        aria-label={`Move slide ${idx + 1} up`}
+                        title="Move Up (Alt+Up)"
+                        className="p-1 text-white/80 hover:text-white disabled:opacity-30 disabled:hover:text-white/80 focus-visible:ring-1 focus-visible:ring-white rounded"
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveSlide(idx, idx + 1);
+                        }}
+                        disabled={idx === slides.length - 1}
+                        aria-label={`Move slide ${idx + 1} down`}
+                        title="Move Down (Alt+Down)"
+                        className="p-1 text-white/80 hover:text-white disabled:opacity-30 disabled:hover:text-white/80 focus-visible:ring-1 focus-visible:ring-white rounded"
+                      >
+                        <ChevronDown size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDuplicateSlide(e, idx)}
+                        disabled={slides.length >= MAX_DECK_SLIDES}
+                        aria-label={`Duplicate slide ${idx + 1}`}
+                        title="Duplicate Slide"
+                        className="p-1 text-white/80 hover:text-white disabled:opacity-30 focus-visible:ring-1 focus-visible:ring-white rounded"
+                      >
+                        <Copy size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteSlide(e, idx)}
+                        disabled={slides.length <= 1}
+                        aria-label={`Delete slide ${idx + 1}`}
+                        title="Delete Slide"
+                        className="p-1 text-red-300 hover:text-red-400 disabled:opacity-30 focus-visible:ring-1 focus-visible:ring-white rounded"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
               {isGenerating && (
                 <div className="text-center text-xs text-[#5a6384] mt-2 flex items-center justify-center gap-1.5">
-                  <Loader2 size={12} className="animate-spin" /> Generating...
+                  <Loader2 size={12} className="animate-spin" />{" "}
+                  {generatingInAnotherTab
+                    ? "Generating in another tab…"
+                    : `Generating slide ${Math.min((deck.slidesDone ?? slides.length) + 1, deck.slidesTotal || outline.length || 1)} of ${deck.slidesTotal || outline.length || 1}`}
                 </div>
               )}
             </div>
@@ -747,12 +1677,34 @@ export default function DeckEditorPage({
               <div className="flex-1 flex items-center justify-center overflow-hidden">
                 {slides[activeSlideIdx] ? (
                   <div className="w-full max-w-4xl shadow-xl ring-1 ring-black/5 rounded overflow-hidden">
-                    <SlideRenderer slide={slides[activeSlideIdx] as any} theme={theme} />
+                    <SlideRenderer
+                      slide={slides[activeSlideIdx] as any}
+                      theme={theme}
+                      editable={!isGenerating && !isOutlining}
+                      onSlideChange={handleCanvasSlideChange}
+                    />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-[#5a6384]">
                     <Loader2 size={32} className="animate-spin mb-4" />
-                    <p>Generating slide...</p>
+                    <p>
+                      {generatingInAnotherTab
+                        ? "Generating in another tab…"
+                        : `Generating slide ${Math.min((deck.slidesDone ?? slides.length) + 1, deck.slidesTotal || outline.length || 1)} of ${deck.slidesTotal || outline.length || 1}…`}
+                    </p>
+                    {batchError && (
+                      <button
+                        onClick={() => {
+                          setBatchError(null);
+                          retryCountRef.current = 0;
+                          drivingSlideGenRef.current = false;
+                          setRetryTrigger((prev) => prev + 1);
+                        }}
+                        className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2F5BFF] text-white text-xs font-semibold hover:bg-[#2548cc] transition shadow-sm"
+                      >
+                        <RefreshCw size={13} /> Resume Generation
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -808,11 +1760,60 @@ export default function DeckEditorPage({
                   {/* Slide controls */}
                   {slides[activeSlideIdx] && (
                     <div className="flex flex-col gap-4 border-t border-[#101A3A]/10 pt-4">
+                      {/* Layout Switcher */}
                       <div>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] mb-2">Slide Notes</h3>
-                        <p className="text-sm text-[#101A3A] leading-relaxed bg-[#F4F6FB] p-3 rounded-lg">
-                          {slides[activeSlideIdx].notes || "No notes."}
-                        </p>
+                        <div className="flex items-center justify-between mb-2">
+                          <label htmlFor="slide-layout-select" className="text-xs font-bold uppercase tracking-wider text-[#5a6384] flex items-center gap-1.5">
+                            <Layout size={13} className="text-[#2F5BFF]" />
+                            Slide Layout
+                          </label>
+                          <span className="text-[10px] text-[#5a6384] capitalize">
+                            {slides[activeSlideIdx].layout?.replace("_", " ")}
+                          </span>
+                        </div>
+                        <select
+                          id="slide-layout-select"
+                          value={slides[activeSlideIdx].layout}
+                          onChange={(e) => handleLayoutSwitch(e.target.value)}
+                          aria-label="Change layout of active slide"
+                          className="w-full text-xs font-medium text-[#101A3A] bg-[#F4F6FB] p-2.5 rounded-lg border border-[#101A3A]/10 hover:border-[#2F5BFF]/50 focus:border-[#2F5BFF] focus:bg-white focus:outline-none transition cursor-pointer"
+                        >
+                          {LAYOUT_OPTIONS.map((lo) => (
+                            <option key={lo.value} value={lo.value}>
+                              {lo.label} — {lo.description}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384]">Slide Notes</h3>
+                          <span className="text-[10px] text-[#5a6384]">Autosaved</span>
+                        </div>
+                        <textarea
+                          value={notesText}
+                          onChange={(e) => handleNotesChange(e.target.value)}
+                          onFocus={handleNotesFocus}
+                          onBlur={handleNotesBlur}
+                          placeholder="Add speaker notes for this slide..."
+                          rows={4}
+                          className="w-full text-sm text-[#101A3A] bg-[#F4F6FB] p-3 rounded-lg border border-transparent focus:border-[#2F5BFF] focus:bg-white focus:outline-none resize-y leading-relaxed transition"
+                        />
+                        {(() => {
+                          const citation = buildSourceCitation(
+                            deck?.sourceName,
+                            slides[activeSlideIdx]?.sourcePage,
+                            slides[activeSlideIdx]?.sourceSection,
+                            slides[activeSlideIdx]?.sourcePageApprox
+                          );
+                          return citation ? (
+                            <div className="mt-2 flex items-start gap-1.5 text-xs text-[#5a6384] bg-[#F4F6FB]/70 px-2.5 py-1.5 rounded border border-[#101A3A]/5">
+                              <span className="font-semibold text-[#101A3A] shrink-0">Source:</span>
+                              <span className="break-words">{citation.replace(/^Source:\s*/i, "")}</span>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       
                       {/* Image Controls for Supported Slides */}
@@ -1052,6 +2053,12 @@ export default function DeckEditorPage({
                         <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a6384] mb-2 flex items-center gap-1.5">
                           <Wand2 size={14} /> Regenerate Slide
                         </h3>
+                        {regenNote && (
+                          <div className="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs flex items-start gap-2">
+                            <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                            <span>{regenNote}</span>
+                          </div>
+                        )}
                         <textarea
                           placeholder="e.g. Make it shorter, use bullet points..."
                           value={regenInstruction}
@@ -1148,6 +2155,183 @@ export default function DeckEditorPage({
           </div>
         )}
       </div>
+
+      {/* Fullscreen Present Mode Overlay */}
+      {isPresenting && (
+        <div className="fixed inset-0 z-50 bg-[#070913] text-white flex flex-col justify-between select-none">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-white/60 uppercase tracking-wider">
+                {title || "Presentation"}
+              </span>
+              <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-white/80">
+                {activeSlideIdx + 1} / {slides.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSpeakerNotesInPresent((prev) => !prev)}
+                className={clsx(
+                  "flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition",
+                  showSpeakerNotesInPresent
+                    ? "bg-[#2F5BFF] text-white border-[#2F5BFF]"
+                    : "bg-white/10 text-white/80 border-transparent hover:bg-white/20"
+                )}
+                aria-label="Toggle speaker notes"
+              >
+                <FileText size={14} /> Notes (S)
+              </button>
+              <button
+                onClick={handleExitPresentMode}
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition"
+                aria-label="Exit Present Mode (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Slide Display */}
+          <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+            <div className="w-full max-w-6xl aspect-video rounded-xl shadow-2xl overflow-hidden ring-1 ring-white/15 bg-white relative">
+              <SlideRenderer
+                slide={slides[activeSlideIdx] as any}
+                theme={theme}
+                editable={false}
+                className="w-full h-full pointer-events-none"
+              />
+            </div>
+          </div>
+
+          {/* Speaker Notes Overlay (Owner only) */}
+          {showSpeakerNotesInPresent && (
+            <div className="mx-auto max-w-2xl mb-4 p-4 rounded-xl bg-black/85 backdrop-blur-md border border-white/15 text-white/90 text-sm shadow-2xl animate-in fade-in slide-in-from-bottom-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1 flex items-center justify-between">
+                <span>Speaker Notes</span>
+                <span className="text-[10px]">Press S to hide</span>
+              </div>
+              <p className="leading-relaxed whitespace-pre-line">
+                {slides[activeSlideIdx]?.notes || "No notes for this slide."}
+              </p>
+            </div>
+          )}
+
+          {/* Bottom Bar */}
+          <div className="p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between">
+            <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#2F5BFF] transition-all duration-300"
+                style={{ width: `${((activeSlideIdx + 1) / Math.max(1, slides.length)) * 100}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveSlideIdx((prev) => Math.max(0, prev - 1))}
+                disabled={activeSlideIdx === 0}
+                aria-label="Previous Slide (Left Arrow)"
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white transition"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() => setActiveSlideIdx((prev) => Math.min(slides.length - 1, prev + 1))}
+                disabled={activeSlideIdx === slides.length - 1}
+                aria-label="Next Slide (Right Arrow)"
+                className="p-2 rounded-full bg-[#2F5BFF] hover:bg-[#2548cc] disabled:opacity-30 text-white transition shadow-lg"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal Dialog */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-[#101A3A]/10 p-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#101A3A] font-bold text-base">
+                <Share2 size={18} className="text-[#2F5BFF]" />
+                Share Presentation
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="p-1 rounded-lg text-[#5a6384] hover:bg-[#F4F6FB]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {deck?.share?.enabled ? (
+              <div className="flex flex-col gap-4">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Public sharing is active
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#5a6384] block mb-1.5">
+                    Shareable Link
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={typeof window !== "undefined" ? `${window.location.origin}/p/${deck.share.slug}` : `/p/${deck.share.slug}`}
+                      className="flex-1 text-xs bg-[#F4F6FB] border border-[#101A3A]/10 rounded-lg p-2.5 text-[#101A3A] select-all font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/p/${deck.share?.slug}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Link copied to clipboard!");
+                      }}
+                      className="px-3 py-2.5 bg-[#2F5BFF] hover:bg-[#2548cc] text-white text-xs font-semibold rounded-lg transition shrink-0"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#5a6384] leading-relaxed">
+                  Anyone with this link can view the slides in presentation mode. Speaker notes, source text, and revision history are never shared.
+                </p>
+
+                <div className="pt-2 border-t border-[#101A3A]/10 flex justify-end">
+                  <button
+                    onClick={handleToggleShare}
+                    disabled={shareLoading}
+                    className="px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition"
+                  >
+                    {shareLoading ? "Revoking…" : "Revoke Share Link"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs text-[#5a6384] leading-relaxed">
+                  Create a public link to share this deck in presentation mode. Anyone with the link can view it without an account.
+                </p>
+                <div className="p-3 bg-[#F4F6FB] rounded-xl text-xs text-[#5a6384]">
+                  🔒 <strong>Privacy Guarantee:</strong> Notes, uploaded source documents, and AI chat are completely excluded from the public view.
+                </div>
+                <div className="pt-2 border-t border-[#101A3A]/10 flex justify-end">
+                  <button
+                    onClick={handleToggleShare}
+                    disabled={shareLoading}
+                    className="px-4 py-2 bg-[#2F5BFF] hover:bg-[#2548cc] text-white text-xs font-semibold rounded-lg transition shadow-sm flex items-center gap-1.5"
+                  >
+                    {shareLoading ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+                    Create Public Link
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

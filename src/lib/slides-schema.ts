@@ -234,7 +234,8 @@ export const SlideSchema = z
       "State the conclusion, not just a topic. E.g. 'Sales Grew 40%' instead of 'Sales Data'."
     ),
     notes: z.string().max(500).describe("Short speaker notes for this slide (1-2 sentences)."),
-    sourcePage: z.number().int().min(1).optional(),
+    sourcePage: z.union([z.string(), z.number()]).optional(),
+    sourcePageApprox: z.boolean().optional(),
     sourceSection: z.string().max(120).optional(),
     meta: z
       .object({
@@ -244,10 +245,70 @@ export const SlideSchema = z
   })
   .and(SlideLayouts);
 
-export type SlideData = z.infer<typeof SlideSchema> & { id: string };
+export type SlideData = z.infer<typeof SlideSchema> & { id: string; regenerations?: number };
 
 export interface SanitizeStats {
   truncations: number;
+}
+
+/**
+ * Formats a page range, single number, or string deterministically into a clean string.
+ * Supports single page ("18") and page ranges ("18-20").
+ * Returns undefined if sourcePageCount is missing, bounds are invalid, or numbers are non-positive.
+ */
+export function formatSourcePage(
+  pageInput?: { start?: number; end?: number } | number | string | null,
+  maxPages?: number,
+  approx?: boolean
+): string | undefined {
+  if (pageInput === undefined || pageInput === null) return undefined;
+
+  let isApprox = Boolean(approx);
+
+  if (typeof pageInput === "object") {
+    const start = pageInput.start;
+    const end = pageInput.end;
+    if (typeof start !== "number" || isNaN(start) || start < 1) return undefined;
+    if (maxPages && start > maxPages) return undefined;
+    const approxSuffix = isApprox ? " (approx.)" : "";
+    if (typeof end === "number" && !isNaN(end) && end > start) {
+      const validEnd = maxPages ? Math.min(end, maxPages) : end;
+      return `${start}-${validEnd}${approxSuffix}`;
+    }
+    return `${start}${approxSuffix}`;
+  }
+
+  if (typeof pageInput === "number") {
+    if (isNaN(pageInput) || pageInput < 1) return undefined;
+    if (maxPages && pageInput > maxPages) return undefined;
+    const approxSuffix = isApprox ? " (approx.)" : "";
+    return `${Math.floor(pageInput)}${approxSuffix}`;
+  }
+
+  if (typeof pageInput === "string") {
+    const trimmed = pageInput.trim();
+    if (!trimmed) return undefined;
+    if (/\(approx\.?\)/i.test(trimmed)) {
+      isApprox = true;
+    }
+    const cleanStr = trimmed.replace(/\s*\((?:approx|approx\.)\)/gi, "").trim();
+    const match =
+      cleanStr.match(/^(?:pp|pages|page|p)\.?\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/i) ||
+      cleanStr.match(/^(\d+)(?:\s*[-–—]\s*(\d+))?$/);
+    if (!match) return undefined;
+    const start = parseInt(match[1], 10);
+    const end = match[2] ? parseInt(match[2], 10) : undefined;
+    if (isNaN(start) || start < 1) return undefined;
+    if (maxPages && start > maxPages) return undefined;
+    const approxSuffix = isApprox ? " (approx.)" : "";
+    if (end !== undefined && !isNaN(end) && end > start) {
+      const validEnd = maxPages ? Math.min(end, maxPages) : end;
+      return `${start}-${validEnd}${approxSuffix}`;
+    }
+    return `${start}${approxSuffix}`;
+  }
+
+  return undefined;
 }
 
 /**
@@ -259,66 +320,244 @@ export interface SanitizeStats {
 export function validateAndSanitizeSourcePage(
   rawPage: unknown,
   sourcePageCount?: number
-): number | undefined {
+): string | undefined {
   if (!sourcePageCount || typeof sourcePageCount !== "number" || sourcePageCount < 1) {
     return undefined;
   }
-
-  let parsed: number | undefined;
-  if (typeof rawPage === "number") {
-    parsed = Math.floor(rawPage);
-  } else if (typeof rawPage === "string") {
-    const num = parseInt(rawPage.replace(/[^0-9]/g, ""), 10);
-    if (!isNaN(num)) {
-      parsed = num;
-    }
-  }
-
-  if (parsed !== undefined && parsed >= 1 && parsed <= sourcePageCount) {
-    return parsed;
-  }
-
-  return undefined;
+  return formatSourcePage(rawPage as any, sourcePageCount);
 }
 
 /**
- * Checks if a numeric value appears in the source text, tolerating common formatting
- * such as "$20.4M" vs 20.4, "21.0%" vs 21, "48,000" vs 48000, "₹28.7Cr" vs 28.7.
+ * Constructs a standardized source citation for speaker notes.
+ * Format examples:
+ * - "Source: Annual_Report.pdf, pages 18-20"
+ * - "Source: Annual_Report.pdf, pages 18-20 (approx.)"
+ * - "Source: Annual_Report.pdf, page 18"
+ * - "Source: Product_Roadmap.docx, section: Executive Overview"
+ * - "Source: pasted text, section: Quarterly Financial Analysis"
+ * - "Source: pasted text"
+ */
+export function buildSourceCitation(
+  sourceName?: string,
+  sourcePage?: string | number,
+  sourceSection?: string,
+  sourcePageApprox?: boolean
+): string {
+  const docName = (sourceName && sourceName.trim()) || "pasted text";
+  const hasPage = sourcePage !== undefined && sourcePage !== null && String(sourcePage).trim().length > 0;
+  const isApprox = Boolean(sourcePageApprox || (hasPage && /\(approx\.?\)/i.test(String(sourcePage))));
+
+  // Keep approximate pages out of the citation: cite exact page when verified, otherwise cite section only
+  if (hasPage && !isApprox) {
+    const rawPageStr = String(sourcePage).trim();
+    const cleanPage = rawPageStr.replace(/\s*\((?:approx|approx\.)\)/gi, "").trim();
+    const label = cleanPage.includes("-") ? "pages" : "page";
+    return `Source: ${docName}, ${label} ${cleanPage}`;
+  }
+  if (sourceSection && sourceSection.trim()) {
+    return `Source: ${docName}, section: ${sourceSection.trim()}`;
+  }
+  return `Source: ${docName}`;
+}
+
+/**
+ * Normalizes source text for numerical and factual grounding checks:
+ * 1. Converts Devanagari numerals (०-९) to ASCII digits (0-9).
+ * 2. Removes page markers: "--- [Page N] ---", "page 18", "p. 18", "pp. 18-20".
+ * 3. Removes full dates (e.g. "15/03/2024", "March 15, 2024", "15 March 2024").
+ * 4. Removes 4-digit calendar years: 1900-2100.
+ * 5. Removes list indices: "1.", "2)", "3.", etc.
+ * 6. Removes standalone integers below 32 that do not have a currency symbol,
+ *    percent sign, or unit (M, Cr, K, bn, etc.).
+ */
+export function cleanSourceForGrounding(sourceText: string): string {
+  if (!sourceText || typeof sourceText !== "string") return "";
+
+  // 1. Devanagari numerals to ASCII
+  const devanagariMap: Record<string, string> = {
+    "०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
+    "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
+  };
+  let text = sourceText.replace(/[०-९]/g, (ch) => devanagariMap[ch] || ch);
+
+  // 2. Remove page markers: "--- [Page N] ---", "page 18", "p. 18", "pp. 18-20"
+  text = text.replace(/---\s*\[Page\s+\d+\]\s*---/gi, " ");
+  text = text.replace(/\b(?:pages?|pp?\.?)\s*\d+(?:\s*[-–—]\s*\d+)?\b/gi, " ");
+
+  // 3. Remove dates
+  text = text.replace(/\b\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\b/g, " ");
+  const monthPattern = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+  const monthDateRegex1 = new RegExp(`\\b${monthPattern}\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b`, "gi");
+  const monthDateRegex2 = new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+${monthPattern}(?:,?\\s+\\d{4})?\\b`, "gi");
+  text = text.replace(monthDateRegex1, " ");
+  text = text.replace(monthDateRegex2, " ");
+
+  // 4. Remove 4-digit calendar years (1900–2100)
+  text = text.replace(/\b(19\d{2}|20\d{2}|2100)\b/g, " ");
+
+  // 5. Remove list indices like "1." or "2)" at start of line or after punctuation
+  text = text.replace(/(?:^|[\n\r\.\?!;])\s*\d{1,2}[\.\)]\s+/g, " ");
+
+  // 6. Remove standalone integers below 32 that lack currency symbol, percent sign, or unit (without matching decimals)
+  text = text.replace(
+    /(?<![\d\.])([$₹€£]\s*)?\b(\d{1,2})\b(?!\.\d)(\s*(?:%|[a-zA-Z]+))?(?![\d\.])/g,
+    (match, prefix, digits, suffix) => {
+      const val = parseInt(digits, 10);
+      if (val < 32) {
+        const hasPrefix = Boolean(prefix && prefix.trim().length > 0);
+        const hasSuffix = Boolean(
+          suffix &&
+            /%|m(?:illion)?|b(?:illion)?|bn|k(?:k)?|cr(?:ore)?|lakh|percent/i.test(
+              suffix.trim()
+            )
+        );
+        if (!hasPrefix && !hasSuffix) {
+          return " ";
+        }
+      }
+      return match;
+    }
+  );
+
+  return text;
+}
+
+/**
+ * Cleans source text for chart category grounding:
+ * - Converts Devanagari numerals (०-९) to ASCII digits (0-9).
+ * - Removes page markers: "--- [Page N] ---", "page 18", "p. 18", "pp. 18-20".
+ * - Keeps calendar years, fiscal quarters (e.g. 2023, FY24, Q3), dates, small integers, and text.
+ */
+export function cleanSourceForCategoryGrounding(sourceText: string): string {
+  if (!sourceText || typeof sourceText !== "string") return "";
+
+  // 1. Devanagari numerals to ASCII
+  const devanagariMap: Record<string, string> = {
+    "०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
+    "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
+  };
+  let text = sourceText.replace(/[०-९]/g, (ch) => devanagariMap[ch] || ch);
+
+  // 2. Remove page markers: "--- [Page N] ---", "page 18", "p. 18", "pp. 18-20"
+  text = text.replace(/---\s*\[Page\s+\d+\]\s*---/gi, " ");
+  text = text.replace(/\b(?:pages?|pp?\.?)\s*\d+(?:\s*[-–—]\s*\d+)?\b/gi, " ");
+
+  return text;
+}
+
+/**
+ * Checks if a numeric value appears in the source text, tolerating magnitude and formatting
+ * such as "$20.4M" vs 20.4 or 20,400,000, "21.0%" vs 21 or 0.21, "48,000" vs 48000 or 48, "₹28.7Cr" vs 28.7.
+ * Ignores page numbers, 4-digit years, dates, list indices, and bare integers below 32.
  */
 export function isNumberInSource(num: number, sourceText: string): boolean {
   if (typeof num !== "number" || isNaN(num) || !sourceText || typeof sourceText !== "string") {
     return false;
   }
 
-  const numStr = String(num);
-  // 1. Exact string match
-  if (sourceText.includes(numStr)) return true;
+  const cleaned = cleanSourceForGrounding(sourceText);
+  if (!cleaned.trim()) return false;
 
-  // 2. Integer with decimal zero (e.g. plotted 21 vs source "21.0" or "21.0%")
-  if (Number.isInteger(num)) {
-    if (sourceText.includes(`${num}.0`)) return true;
-  } else {
-    // 3. Trim trailing decimal zeros (e.g. 20.40 vs 20.4)
-    const trimmed = numStr.replace(/\.?0+$/, "");
-    if (trimmed && sourceText.includes(trimmed)) return true;
-  }
+  // Token scanner matching currency amounts, percentages, and metrics with magnitude units
+  const tokenRegex =
+    /(?:([$₹€£])\s*)?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)\s*(%|[a-zA-Z]+)?/g;
 
-  // 4. US formatted comma match (e.g. 48000 vs 48,000)
-  const withCommas = num.toLocaleString("en-US");
-  if (sourceText.includes(withCommas)) return true;
-
-  // 5. Token scanner matching currency amounts, percentages, and metrics in text
-  const tokenRegex = /[-+]?[₹$€£]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)/g;
   let match: RegExpExecArray | null;
-  while ((match = tokenRegex.exec(sourceText)) !== null) {
-    const rawDigits = match[1].replace(/,/g, "");
-    const parsed = parseFloat(rawDigits);
-    if (!isNaN(parsed) && Math.abs(parsed - num) < 0.0001) {
-      return true;
+  while ((match = tokenRegex.exec(cleaned)) !== null) {
+    const currency = match[1];
+    const rawDigits = match[2].replace(/,/g, "");
+    const unit = (match[3] || "").toLowerCase().trim();
+
+    const baseVal = parseFloat(rawDigits);
+    if (isNaN(baseVal)) continue;
+
+    // Filter standalone integers < 32 without currency or valid unit
+    if (Number.isInteger(baseVal) && baseVal < 32 && !currency && !unit) {
+      continue;
+    }
+
+    const candidates: number[] = [baseVal];
+
+    if (unit === "%" || unit === "percent") {
+      candidates.push(baseVal / 100);
+    } else if (unit === "k" || unit === "thousand") {
+      candidates.push(baseVal * 1_000);
+    } else if (unit === "m" || unit === "million") {
+      candidates.push(baseVal * 1_000_000);
+    } else if (unit === "b" || unit === "bn" || unit === "billion") {
+      candidates.push(baseVal * 1_000_000_000);
+    } else if (unit === "cr" || unit === "crore") {
+      candidates.push(baseVal * 10_000_000); // 1 Crore = 10,000,000
+    } else if (unit === "lakh") {
+      candidates.push(baseVal * 100_000);
+    }
+
+    // Inverse scaling support (e.g. source 20,400,000 vs plotted 20.4 in millions)
+    if (baseVal >= 1_000_000) {
+      candidates.push(baseVal / 1_000_000);
+    }
+    if (baseVal >= 10_000_000) {
+      candidates.push(baseVal / 10_000_000);
+    }
+    if (baseVal >= 1_000) {
+      candidates.push(baseVal / 1_000);
+    }
+
+    for (const cand of candidates) {
+      if (Math.abs(cand - num) < 0.0001) {
+        return true;
+      }
+      if (num !== 0 && Math.abs(cand - num) / Math.abs(num) < 0.0001) {
+        return true;
+      }
     }
   }
 
   return false;
+}
+
+/**
+ * Extracts all unique grounded numeric values from source text using the exact same
+ * cleaning and token-scanning rules as isNumberInSource and grounding checks.
+ * Strips page markers, 4-digit years, dates, list indices, and bare integers < 32.
+ */
+export function extractGroundedNumbersFromSource(sourceText?: string): number[] {
+  if (!sourceText || typeof sourceText !== "string" || !sourceText.trim()) {
+    return [];
+  }
+
+  const cleaned = cleanSourceForGrounding(sourceText);
+  if (!cleaned.trim()) return [];
+
+  const tokenRegex =
+    /(?:([$₹€£])\s*)?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)\s*(%|[a-zA-Z]+)?/g;
+
+  const groundedValues: number[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = tokenRegex.exec(cleaned)) !== null) {
+    const currency = match[1];
+    const rawDigits = match[2].replace(/,/g, "");
+    const unit = (match[3] || "").toLowerCase().trim();
+
+    const baseVal = parseFloat(rawDigits);
+    if (isNaN(baseVal)) continue;
+
+    // Filter standalone integers < 32 without currency or valid unit
+    if (Number.isInteger(baseVal) && baseVal < 32 && !currency && !unit) {
+      continue;
+    }
+
+    groundedValues.push(baseVal);
+  }
+
+  return Array.from(new Set(groundedValues));
+}
+
+/**
+ * Counts the number of distinct grounded numeric values in an excerpt using cleanSourceForGrounding and isNumberInSource logic.
+ */
+export function countGroundedNumbersInExcerpt(excerpt?: string): number {
+  return extractGroundedNumbersFromSource(excerpt).length;
 }
 
 /**
@@ -329,45 +568,16 @@ export function isNumberInSource(num: number, sourceText: string): boolean {
  */
 export function convertChartToFallbackLayout<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
   slide: T,
-  sourceText?: string
+  sourceText?: string,
+  talkingPoints?: string[]
 ): T {
   const content = slide.content || {};
   const categories: string[] = Array.isArray(content.categories) ? content.categories : [];
-  const series: Array<{ name: string; values: number[] }> = Array.isArray(content.series) ? content.series : [];
 
-  // 1. Check if 2-4 grounded data points exist to form a valid stats slide
-  if (sourceText && typeof sourceText === "string" && categories.length >= 2 && series.length >= 1) {
-    const firstSeries = series[0];
-    const groundedStats: Array<{ value: string; label: string }> = [];
-    if (Array.isArray(firstSeries.values)) {
-      for (let i = 0; i < categories.length && i < firstSeries.values.length; i++) {
-        const val = firstSeries.values[i];
-        if (typeof val === "number" && !isNaN(val) && isNumberInSource(val, sourceText)) {
-          groundedStats.push({
-            value: String(val),
-            label: truncateWordsAndChars(categories[i], 8, 55),
-          });
-        }
-      }
-    }
-    if (groundedStats.length >= 2 && groundedStats.length <= 4) {
-      (slide as any).layout = "stats";
-      (slide as any).content = {
-        stats: groundedStats,
-      };
-      return slide;
-    }
-  }
-
-  // 2. Otherwise convert to bullets layout without inventing data
+  // Convert to bullets layout without inventing placeholder/apology text
   const bullets: string[] = [];
   if (content.caption && typeof content.caption === "string" && content.caption.trim()) {
     bullets.push(truncateWordsAndChars(content.caption, 12, 90));
-  }
-  for (const cat of categories) {
-    if (cat && typeof cat === "string" && cat.trim() && bullets.length < 4) {
-      bullets.push(truncateWordsAndChars(cat, 12, 90));
-    }
   }
   if (Array.isArray(content.bullets)) {
     for (const b of content.bullets) {
@@ -376,26 +586,49 @@ export function convertChartToFallbackLayout<T extends { title?: string; notes?:
       }
     }
   }
-  while (bullets.length < 2) {
-    bullets.push(truncateWordsAndChars(`Key findings for ${slide.title || "strategic analysis"}`, 12, 90));
+  if (bullets.length < 4 && Array.isArray(talkingPoints)) {
+    for (const pt of talkingPoints) {
+      if (pt && typeof pt === "string" && pt.trim() && bullets.length < 4) {
+        bullets.push(truncateWordsAndChars(pt, 12, 90));
+      }
+    }
+  }
+  for (const cat of categories) {
+    if (cat && typeof cat === "string" && cat.trim() && bullets.length < 4) {
+      bullets.push(truncateWordsAndChars(cat, 12, 90));
+    }
+  }
+  if (bullets.length < 3 && slide.notes && typeof slide.notes === "string" && slide.notes.trim()) {
+    bullets.push(truncateWordsAndChars(slide.notes, 12, 90));
+  }
+  if (bullets.length < 3 && slide.title && typeof slide.title === "string" && slide.title.trim()) {
+    bullets.push(truncateWordsAndChars(slide.title, 12, 90));
+  }
+  while (bullets.length < 3) {
+    bullets.push(truncateWordsAndChars(slide.title || "Key Takeaways", 12, 90));
   }
 
   (slide as any).layout = "bullets";
   (slide as any).content = {
-    bullets: bullets.slice(0, 4),
+    bullets: bullets.slice(0, 6),
   };
   return slide;
 }
 
 /**
  * Enforces strict chart data integrity:
- * - A chart slide is allowed ONLY IF the source excerpt contains at least 3 real data points for the series.
- * - Every plotted value must appear in the source excerpt (numeric match, tolerating formatting like "$20.4M" vs 20.4).
- * - If not, changes the layout to bullets or stats and never invents or pads data.
+ * - Rejects chart if series is flat (all values equal) or has fewer than 3 distinct values.
+ * - Rejects numbers that only match page markers ("--- [Page N] ---", "page 18", "p. 18"),
+ *   4-digit years, dates, list indices, or integers below 32 without currency/unit.
+ * - Requires at least 3 data points that each match a real value in the source excerpt
+ *   (supporting magnitude formatting: "$20.4M" matches 20.4 or 20,400,000).
+ * - Category labels must also appear in the source excerpt.
+ * - On failure, changes layout to clean bullets or stats fallback without inventing or padding data.
  */
 export function validateAndGroundChartSlide<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
   slide: T,
-  sourceText?: string
+  sourceText?: string,
+  talkingPoints?: string[]
 ): T {
   if (slide.layout !== "chart") return slide;
 
@@ -404,18 +637,43 @@ export function validateAndGroundChartSlide<T extends { title?: string; notes?: 
   const series: Array<{ name: string; values: number[] }> = Array.isArray(content.series) ? content.series : [];
 
   if (!sourceText || typeof sourceText !== "string" || !sourceText.trim()) {
-    return convertChartToFallbackLayout(slide);
+    return convertChartToFallbackLayout(slide, undefined, talkingPoints);
   }
 
   const cleanSource = sourceText.trim();
+  const categorySourceText = cleanSourceForCategoryGrounding(cleanSource).toLowerCase();
+
+  // Category labels must appear in the source excerpt (tested against category-cleaned text preserving years/quarters)
+  if (categories.length < 2) {
+    return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
+  }
+  const unicodeSplitRegex = /[^\p{L}\p{N}\p{M}]+/u;
+  const categoriesGrounded = categories.every((cat) => {
+    if (!cat || typeof cat !== "string") return false;
+    const trimmed = cat.trim().toLowerCase();
+    if (!trimmed) return false;
+    if (categorySourceText.includes(trimmed)) return true;
+    const tokens = trimmed
+      .split(unicodeSplitRegex)
+      .filter((w) => {
+        const isDevanagari = /[\u0900-\u097F]/u.test(w);
+        return Array.from(w).length >= (isDevanagari ? 2 : 2);
+      });
+    return tokens.length > 0 && tokens.some((t) => categorySourceText.includes(t));
+  });
+
+  if (!categoriesGrounded) {
+    return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
+  }
+
   const allValues: number[] = [];
   for (const ser of series) {
     if (!Array.isArray(ser.values)) {
-      return convertChartToFallbackLayout(slide, cleanSource);
+      return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
     }
     for (const val of ser.values) {
       if (typeof val !== "number" || isNaN(val)) {
-        return convertChartToFallbackLayout(slide, cleanSource);
+        return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
       }
       allValues.push(val);
     }
@@ -423,13 +681,112 @@ export function validateAndGroundChartSlide<T extends { title?: string; notes?: 
 
   // Must contain at least 3 data points total
   if (allValues.length < 3) {
-    return convertChartToFallbackLayout(slide, cleanSource);
+    return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
   }
 
-  // Every plotted value must appear in the source text
-  const allGrounded = allValues.every((val) => isNumberInSource(val, cleanSource));
-  if (!allGrounded) {
-    return convertChartToFallbackLayout(slide, cleanSource);
+  // Must contain at least 3 distinct values (rejects flat series like [10, 10, 10, 10] or [10, 10, 20, 20])
+  const distinctValues = new Set(allValues);
+  if (distinctValues.size < 3) {
+    return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
+  }
+
+  // At least 3 data points must match a real value in the source excerpt
+  const groundedValues = allValues.filter((val) => isNumberInSource(val, cleanSource));
+  if (groundedValues.length < 3 || groundedValues.length !== allValues.length) {
+    return convertChartToFallbackLayout(slide, cleanSource, talkingPoints);
+  }
+
+  return slide;
+}
+
+/**
+ * Fallback converter for stats slides when source numbers cannot be grounded or sourceText is missing:
+ * - Converts stats items to bullet points.
+ * - Fills with talking points or title if needed to ensure at least 3 bullets.
+ * - Never invents or pads placeholder/apology data.
+ */
+export function convertStatsToFallbackLayout<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
+  slide: T,
+  talkingPoints?: string[]
+): T {
+  const content = slide.content || {};
+  const bullets: string[] = [];
+
+  if (Array.isArray(content.stats)) {
+    for (const stat of content.stats) {
+      if (stat && typeof stat === "object") {
+        if (stat.label && stat.value) {
+          bullets.push(truncateWordsAndChars(`${stat.label}: ${stat.value}`, 12, 90));
+        } else if (stat.label) {
+          bullets.push(truncateWordsAndChars(stat.label, 12, 90));
+        }
+      }
+    }
+  }
+
+  if (bullets.length < 4 && Array.isArray(talkingPoints)) {
+    for (const pt of talkingPoints) {
+      if (pt && typeof pt === "string" && pt.trim() && bullets.length < 4) {
+        bullets.push(truncateWordsAndChars(pt, 12, 90));
+      }
+    }
+  }
+
+  if (bullets.length < 3 && slide.notes && typeof slide.notes === "string" && slide.notes.trim()) {
+    bullets.push(truncateWordsAndChars(slide.notes, 12, 90));
+  }
+  if (bullets.length < 3 && slide.title && typeof slide.title === "string" && slide.title.trim()) {
+    bullets.push(truncateWordsAndChars(slide.title, 12, 90));
+  }
+  while (bullets.length < 3) {
+    bullets.push(truncateWordsAndChars(slide.title || "Key Takeaways", 12, 90));
+  }
+
+  (slide as any).layout = "bullets";
+  (slide as any).content = {
+    bullets: bullets.slice(0, 6),
+  };
+  return slide;
+}
+
+/**
+ * Validates and grounds stats slides:
+ * - Checks each stat value against cleanSourceForGrounding using isNumberInSource.
+ * - Requires at least one grounded stat in sourceText; otherwise falls back to bullets.
+ * - If sourceText is missing/deleted, falls back to bullets immediately.
+ */
+export function validateAndGroundStatsSlide<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
+  slide: T,
+  sourceText?: string,
+  talkingPoints?: string[]
+): T {
+  if (slide.layout !== "stats") return slide;
+
+  if (!sourceText || typeof sourceText !== "string" || !sourceText.trim()) {
+    return convertStatsToFallbackLayout(slide, talkingPoints);
+  }
+
+  const cleanSource = sourceText.trim();
+  const content = slide.content || {};
+  const stats: Array<{ value: string; label: string; icon?: any }> = Array.isArray(content.stats) ? content.stats : [];
+
+  if (stats.length === 0) {
+    return convertStatsToFallbackLayout(slide, talkingPoints);
+  }
+
+  // Check if at least one stat contains numbers grounded in cleanSource
+  const hasAnyGroundedStat = stats.some((stat) => {
+    if (!stat || !stat.value || typeof stat.value !== "string") return false;
+    const numbers = stat.value.match(/\d+(?:[.,]\d+)*/g);
+    if (!numbers || numbers.length === 0) return false;
+    return numbers.some((numStr) => {
+      const val = parseFloat(numStr.replace(/,/g, ""));
+      return !isNaN(val) && isNumberInSource(val, cleanSource);
+    });
+  });
+
+  if (!hasAnyGroundedStat) {
+    return convertStatsToFallbackLayout(slide, talkingPoints);
   }
 
   return slide;
@@ -448,7 +805,8 @@ export function sanitizeSlidePayload(
   isLast: boolean = false,
   stats?: SanitizeStats,
   sourcePageCount?: number,
-  sourceText?: string
+  sourceText?: string,
+  talkingPoints?: string[]
 ): any {
   if (!raw || typeof raw !== "object") return {};
 
@@ -706,45 +1064,31 @@ export function sanitizeSlidePayload(
         categories.length >= 2 &&
         series.every((s: any) => s.values.length === categories.length);
 
-      // Check grounding if sourceText is provided
-      let isGrounded = true;
-      if (sourceText && typeof sourceText === "string" && sourceText.trim()) {
-        const allPlottedValues = series.flatMap((s: any) => s.values);
-        isGrounded =
-          allPlottedValues.length >= 3 &&
-          allPlottedValues.every((val: number) => isNumberInSource(val, sourceText));
-      }
+      const tempSlide = {
+        title,
+        notes,
+        layout: "chart",
+        content: {
+          chartType,
+          chartTitle,
+          categories,
+          series,
+          caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
+          bullets: Array.isArray(content.bullets) ? content.bullets : undefined,
+        },
+      };
 
-      // Chart is only allowed if it has at least 3 values, matches categories, and is grounded
-      if (allSeriesMatchCategories && totalValues >= 3 && isGrounded) {
-        result = {
-          title,
-          notes,
-          layout: "chart",
-          content: {
-            chartType,
-            chartTitle,
-            categories,
-            series,
-            caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
-          },
-        };
+      if (!allSeriesMatchCategories || totalValues < 3) {
+        result = convertChartToFallbackLayout(tempSlide, sourceText, talkingPoints);
+      } else if (sourceText && typeof sourceText === "string" && sourceText.trim()) {
+        result = validateAndGroundChartSlide(tempSlide, sourceText, talkingPoints);
       } else {
-        // Fallback to bullets or stats without inventing data
-        const tempSlide = {
-          title,
-          notes,
-          layout: "chart",
-          content: {
-            chartType,
-            chartTitle,
-            categories,
-            series,
-            caption: content.caption ? cleanString(content.caption, 15, 100) : undefined,
-            bullets: Array.isArray(content.bullets) ? content.bullets : undefined,
-          },
-        };
-        result = convertChartToFallbackLayout(tempSlide, sourceText);
+        const distinctVals = new Set(series.flatMap((s: any) => s.values));
+        if (distinctVals.size < 3) {
+          result = convertChartToFallbackLayout(tempSlide, undefined, talkingPoints);
+        } else {
+          result = tempSlide;
+        }
       }
       break;
     }
@@ -837,13 +1181,28 @@ export function buildFallbackBulletsSlide(
  */
 export function groundAndSanitizeSlide<T extends { title?: string; notes?: string; content?: any; layout?: string }>(
   slide: T,
-  sourceText?: string
+  sourceText?: string,
+  talkingPoints?: string[]
 ): T {
+  if (slide && slide.content && typeof slide.content === "object" && "_stash" in slide.content) {
+    const { _stash, ...cleanContent } = slide.content;
+    slide = { ...slide, content: cleanContent };
+  }
   const cleanSource = (sourceText || "").trim();
   const urlRegex = /https?:\/\/[^\s"'<>)\]]+/gi;
 
-  if (slide.layout === "chart") {
-    slide = validateAndGroundChartSlide(slide, cleanSource);
+  if (!cleanSource) {
+    if (slide.layout === "chart") {
+      slide = convertChartToFallbackLayout(slide, undefined, talkingPoints);
+    } else if (slide.layout === "stats") {
+      slide = convertStatsToFallbackLayout(slide, talkingPoints);
+    }
+  } else {
+    if (slide.layout === "chart") {
+      slide = validateAndGroundChartSlide(slide, cleanSource, talkingPoints);
+    } else if (slide.layout === "stats") {
+      slide = validateAndGroundStatsSlide(slide, cleanSource, talkingPoints);
+    }
   }
 
   function stripUnapprovedUrls(text: any): string {
@@ -859,86 +1218,121 @@ export function groundAndSanitizeSlide<T extends { title?: string; notes?: strin
   }
 
   let ungroundedLogged = false;
-  function checkNumericGrounding(val: any) {
-    if (!val || typeof val !== "string" || !cleanSource || ungroundedLogged) return;
-    const numbers = val.match(/\d+(?:[.,]\d+)*/g);
-    if (numbers) {
-      for (const num of numbers) {
-        const rawDigits = num.replace(/[.,]/g, "");
-        if (rawDigits.length > 0 && !cleanSource.includes(num) && !cleanSource.includes(rawDigits)) {
-          console.warn("[SlideGen] Stat value or number in slide does not appear in source text");
-          ungroundedLogged = true;
-          break;
+  const categoryCleanSource = cleanSourceForCategoryGrounding(cleanSource);
+
+  function stripUngroundedNumbers(val: any): string {
+    if (!val || typeof val !== "string" || !cleanSource) return val;
+    return val.replace(/(?:[\$€£₹])?\b\d+(?:[.,]\d+)*(?:%|[kKmMbBtTxX]|cr|Cr|lakh)?(?!\w)/gi, (match) => {
+      const numPart = match.replace(/[$€£₹%kKmMbBtTxX,]|cr|lakh/gi, "");
+      const parsed = parseFloat(numPart);
+      if (isNaN(parsed)) return match;
+
+      // 4-digit calendar years: check categoryCleanSource where years are preserved
+      if (parsed >= 1900 && parsed <= 2099 && /^\d{4}$/.test(numPart)) {
+        if (categoryCleanSource.includes(numPart)) {
+          return match;
         }
       }
-    }
+
+      if (!isNumberInSource(parsed, cleanSource)) {
+        if (!ungroundedLogged) {
+          console.warn("[SlideGen] Stat value or number in slide does not appear in source text");
+          ungroundedLogged = true;
+        }
+        return "";
+      }
+      return match;
+    }).replace(/\s{2,}/g, " ").trim();
   }
 
   if (slide.title) {
-    checkNumericGrounding(slide.title);
-    slide.title = stripUnapprovedUrls(slide.title);
+    slide.title = stripUnapprovedUrls(stripUngroundedNumbers(slide.title));
   }
   if (slide.notes) {
-    checkNumericGrounding(slide.notes);
-    slide.notes = stripUnapprovedUrls(slide.notes);
+    slide.notes = stripUnapprovedUrls(stripUngroundedNumbers(slide.notes));
   }
 
   if (slide.content && typeof slide.content === "object") {
+    // Subtitle
+    if (slide.content.subtitle) {
+      slide.content.subtitle = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.subtitle));
+    }
     // Bullets
     if (Array.isArray(slide.content.bullets)) {
       slide.content.bullets = slide.content.bullets.map((b: string) => {
-        checkNumericGrounding(b);
-        return stripUnapprovedUrls(b);
+        return stripUnapprovedUrls(stripUngroundedNumbers(b));
       });
     }
+    // Two-column left/right content objects
+    if (slide.content.left && typeof slide.content.left === "object") {
+      if (slide.content.left.heading) {
+        slide.content.left.heading = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.left.heading));
+      }
+      if (Array.isArray(slide.content.left.bullets)) {
+        slide.content.left.bullets = slide.content.left.bullets.map((b: string) => {
+          return stripUnapprovedUrls(stripUngroundedNumbers(b));
+        });
+      }
+    }
+    if (slide.content.right && typeof slide.content.right === "object") {
+      if (slide.content.right.heading) {
+        slide.content.right.heading = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.right.heading));
+      }
+      if (Array.isArray(slide.content.right.bullets)) {
+        slide.content.right.bullets = slide.content.right.bullets.map((b: string) => {
+          return stripUnapprovedUrls(stripUngroundedNumbers(b));
+        });
+      }
+    }
+    // Legacy leftBullets / rightBullets fallback
     if (Array.isArray(slide.content.leftBullets)) {
       slide.content.leftBullets = slide.content.leftBullets.map((b: string) => {
-        checkNumericGrounding(b);
-        return stripUnapprovedUrls(b);
+        return stripUnapprovedUrls(stripUngroundedNumbers(b));
       });
     }
     if (Array.isArray(slide.content.rightBullets)) {
       slide.content.rightBullets = slide.content.rightBullets.map((b: string) => {
-        checkNumericGrounding(b);
-        return stripUnapprovedUrls(b);
+        return stripUnapprovedUrls(stripUngroundedNumbers(b));
       });
     }
     // Headings
     if (slide.content.heading) {
-      checkNumericGrounding(slide.content.heading);
-      slide.content.heading = stripUnapprovedUrls(slide.content.heading);
+      slide.content.heading = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.heading));
     }
     if (slide.content.leftHeading) {
-      checkNumericGrounding(slide.content.leftHeading);
-      slide.content.leftHeading = stripUnapprovedUrls(slide.content.leftHeading);
+      slide.content.leftHeading = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.leftHeading));
     }
     if (slide.content.rightHeading) {
-      checkNumericGrounding(slide.content.rightHeading);
-      slide.content.rightHeading = stripUnapprovedUrls(slide.content.rightHeading);
+      slide.content.rightHeading = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.rightHeading));
     }
     // Stats
     if (Array.isArray(slide.content.stats)) {
       for (const stat of slide.content.stats) {
         if (stat.value) {
-          checkNumericGrounding(stat.value);
-          stat.value = stripUnapprovedUrls(stat.value);
+          stat.value = stripUnapprovedUrls(stripUngroundedNumbers(stat.value));
         }
         if (stat.label) {
-          checkNumericGrounding(stat.label);
-          stat.label = stripUnapprovedUrls(stat.label);
+          stat.label = stripUnapprovedUrls(stripUngroundedNumbers(stat.label));
         }
+      }
+      const remainingStats = slide.content.stats.filter(
+        (s: any) => s && s.value && s.value.trim().length > 0
+      );
+      if (slide.layout === "stats" && remainingStats.length === 0) {
+        slide = convertStatsToFallbackLayout(slide, talkingPoints);
       }
     }
     // Steps
     if (Array.isArray(slide.content.steps)) {
       for (const step of slide.content.steps) {
         if (step.label) {
-          checkNumericGrounding(step.label);
-          step.label = stripUnapprovedUrls(step.label);
+          step.label = stripUnapprovedUrls(stripUngroundedNumbers(step.label));
+        }
+        if (step.desc) {
+          step.desc = stripUnapprovedUrls(stripUngroundedNumbers(step.desc));
         }
         if (step.description) {
-          checkNumericGrounding(step.description);
-          step.description = stripUnapprovedUrls(step.description);
+          step.description = stripUnapprovedUrls(stripUngroundedNumbers(step.description));
         }
       }
     }
@@ -946,36 +1340,30 @@ export function groundAndSanitizeSlide<T extends { title?: string; notes?: strin
     if (Array.isArray(slide.content.columns)) {
       for (const col of slide.content.columns) {
         if (col.heading) {
-          checkNumericGrounding(col.heading);
-          col.heading = stripUnapprovedUrls(col.heading);
+          col.heading = stripUnapprovedUrls(stripUngroundedNumbers(col.heading));
         }
         if (Array.isArray(col.bullets)) {
           col.bullets = col.bullets.map((b: string) => {
-            checkNumericGrounding(b);
-            return stripUnapprovedUrls(b);
+            return stripUnapprovedUrls(stripUngroundedNumbers(b));
           });
         }
       }
     }
     // Quotes & CTA
     if (slide.content.quote) {
-      checkNumericGrounding(slide.content.quote);
-      slide.content.quote = stripUnapprovedUrls(slide.content.quote);
+      slide.content.quote = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.quote));
     }
     if (slide.content.attribution) {
       slide.content.attribution = stripUnapprovedUrls(slide.content.attribution);
     }
     if (slide.content.headline) {
-      checkNumericGrounding(slide.content.headline);
-      slide.content.headline = stripUnapprovedUrls(slide.content.headline);
+      slide.content.headline = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.headline));
     }
     if (slide.content.cta) {
-      checkNumericGrounding(slide.content.cta);
-      slide.content.cta = stripUnapprovedUrls(slide.content.cta);
+      slide.content.cta = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.cta));
     }
     if (slide.content.caption) {
-      checkNumericGrounding(slide.content.caption);
-      slide.content.caption = stripUnapprovedUrls(slide.content.caption);
+      slide.content.caption = stripUnapprovedUrls(stripUngroundedNumbers(slide.content.caption));
     }
     // Charts categories & series
     if (Array.isArray(slide.content.categories)) {
@@ -984,11 +1372,6 @@ export function groundAndSanitizeSlide<T extends { title?: string; notes?: strin
     if (Array.isArray(slide.content.series)) {
       for (const s of slide.content.series) {
         if (s.name) s.name = stripUnapprovedUrls(s.name);
-        if (Array.isArray(s.values)) {
-          for (const v of s.values) {
-            checkNumericGrounding(String(v));
-          }
-        }
       }
     }
   }

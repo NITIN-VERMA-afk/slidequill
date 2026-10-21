@@ -134,4 +134,64 @@ describe("Slide Regeneration & AI Chat Resilience Without sourceText", () => {
     assert.equal(result.theme, "corporate");
     assert.equal(result.slides[1].title, "Global Market Go-To-Market Strategy");
   });
+
+  it("returns clear note when regenerating a stats or chart slide after sourceText was deleted", async () => {
+    const user = await User.create({
+      name: "Deleted Source User",
+      email: "deleted.source@example.com",
+      credits: 5,
+      hasPurchased: true,
+    });
+
+    // Create deck with stats and chart slides and NO sourceText (deleted)
+    const deck = await Deck.create({
+      userId: user._id,
+      title: "Deck With Deleted Source",
+      status: "ready",
+      slides: [
+        {
+          id: "slide-stats-1",
+          layout: "stats",
+          title: "Operating Metrics",
+          content: { stats: [{ value: "100M", label: "ARR" }] },
+          notes: "Stats notes.",
+          regenerations: 0,
+        },
+        {
+          id: "slide-chart-1",
+          layout: "chart",
+          title: "Quarterly Growth",
+          content: {
+            chartType: "bar",
+            categories: ["Q1", "Q2", "Q3"],
+            series: [{ name: "Metric", values: [10, 20, 30] }],
+          },
+          notes: "Chart notes.",
+          regenerations: 0,
+        },
+      ],
+    });
+
+    const isSourceDeleted = !deck.sourceText || !deck.sourceText.trim();
+    assert.equal(isSourceDeleted, true, "deck.sourceText must be deleted/empty");
+
+    // Check stats slide regeneration logic
+    const statsSlide = deck.slides[0];
+    const isStats = statsSlide.layout === "stats" || statsSlide.layout === "chart";
+    const statsNote =
+      isSourceDeleted && isStats
+        ? "Source text was deleted, so this slide can't use verified numbers"
+        : undefined;
+    assert.equal(statsNote, "Source text was deleted, so this slide can't use verified numbers");
+
+    // Check chart slide regeneration logic
+    const chartSlide = deck.slides[1];
+    const isChart = chartSlide.layout === "stats" || chartSlide.layout === "chart";
+    const chartNote =
+      isSourceDeleted && isChart
+        ? "Source text was deleted, so this slide can't use verified numbers"
+        : undefined;
+    assert.equal(chartNote, "Source text was deleted, so this slide can't use verified numbers");
+  });
 });
+

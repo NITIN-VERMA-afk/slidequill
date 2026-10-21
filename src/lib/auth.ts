@@ -59,7 +59,9 @@ export async function verifyAccessToken(
   token: string
 ): Promise<AccessTokenPayload | null> {
   try {
-    const { payload } = await jwtVerify<AccessTokenPayload>(token, getSecret());
+    const { payload } = await jwtVerify<AccessTokenPayload>(token, getSecret(), {
+      algorithms: ["HS256"],
+    });
     return payload;
   } catch {
     return null;
@@ -68,14 +70,32 @@ export async function verifyAccessToken(
 
 // ─── Session resolution (for server components / route handlers) ──────────────
 
+// Test hook to mock next/headers in unit tests without requestAsyncStorage
+let mockCookiesFn: (() => Promise<{ get: (name: string) => { value?: string } | undefined }>) | null = null;
+let mockHeadersFn: (() => Promise<{ get: (name: string) => string | null }>) | null = null;
+
+export function __setMockHeaders(mock: {
+  cookies?: (() => Promise<{ get: (name: string) => { value?: string } | undefined }>) | null;
+  headers?: (() => Promise<{ get: (name: string) => string | null }>) | null;
+} | null) {
+  mockCookiesFn = mock?.cookies ?? null;
+  mockHeadersFn = mock?.headers ?? null;
+}
+
 /**
  * Read the sq_at cookie or Authorization Bearer header and return the decoded payload.
  * Fallback to sq_rt refresh token lookup if access token is expired/missing.
  * Returns null if unauthenticated.
  */
 export async function getSession(): Promise<AccessTokenPayload | null> {
-  const jar = await cookies();
-  const token = jar.get("sq_at")?.value;
+  let jar: { get: (name: string) => { value?: string } | undefined } | null = null;
+  try {
+    jar = mockCookiesFn ? await mockCookiesFn() : await cookies();
+  } catch {
+    // cookies() not available in test or non-request context
+  }
+
+  const token = jar?.get("sq_at")?.value;
   if (token) {
     const payload = await verifyAccessToken(token);
     if (payload) return payload;
@@ -83,7 +103,7 @@ export async function getSession(): Promise<AccessTokenPayload | null> {
 
   // Check Authorization: Bearer <token> header for API requests
   try {
-    const head = await headers();
+    const head = mockHeadersFn ? await mockHeadersFn() : await headers();
     const authHeader = head.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const bearer = authHeader.slice(7).trim();
@@ -95,19 +115,23 @@ export async function getSession(): Promise<AccessTokenPayload | null> {
   }
 
   // Fallback: check refresh token if sq_at is missing or expired
-  const rawRefresh = jar.get("sq_rt")?.value;
-  if (!rawRefresh) return null;
-  const session = await findSession(rawRefresh);
-  if (!session?.userId) return null;
+  if (jar) {
+    const rawRefresh = jar.get("sq_rt")?.value;
+    if (!rawRefresh) return null;
+    const session = await findSession(rawRefresh);
+    if (!session?.userId) return null;
 
-  await connectDB();
-  const user = (await User.findById(session.userId).select("role").lean()) as IUser | null;
-  if (!user) return null;
+    await connectDB();
+    const user = (await User.findById(session.userId).select("role").lean()) as IUser | null;
+    if (!user) return null;
 
-  return {
-    sub: session.userId.toString(),
-    role: user.role,
-  };
+    return {
+      sub: session.userId.toString(),
+      role: user.role,
+    };
+  }
+
+  return null;
 }
 
 /**

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { CreditCard, Zap, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { PLANS } from "@/lib/plans";
 import { clsx } from "clsx";
 import Link from "next/link";
+import { toast } from "sonner";
 import BillingLoading from "./loading";
 
 interface PaymentRecord {
@@ -20,6 +21,7 @@ interface PaymentRecord {
 
 export default function BillingPage() {
   const router = useRouter();
+  const isMountedRef = useRef(true);
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export default function BillingPage() {
       });
     return () => {
       active = false;
+      isMountedRef.current = false;
     };
   }, []);
 
@@ -85,23 +88,80 @@ export default function BillingPage() {
         description: PLANS[planId]?.name || "Credits",
         order_id: orderData.orderId,
         handler: async function (response: any) {
+          const toastId = toast.loading("Confirming payment...");
           try {
             const verifyRes = await fetch("/api/billing/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(response),
             });
-            if (verifyRes.ok) {
-              await fetchHistory(); // refresh credits & history
-              router.refresh();
-              alert("Payment successful! Credits added.");
+
+            if (!verifyRes.ok) {
+              if (isMountedRef.current) {
+                toast.error("Payment verification failed. Please contact support.", { id: toastId });
+              }
+              return;
+            }
+
+            // Fetch baseline credit balance from server immediately before starting polling loop
+            let initialCredits = 0;
+            try {
+              const baselineRes = await fetch("/api/billing/history");
+              if (baselineRes.ok) {
+                const baselineData = await baselineRes.json();
+                initialCredits = typeof baselineData.credits === "number" ? baselineData.credits : 0;
+              }
+            } catch {
+              initialCredits = credits;
+            }
+
+            // Poll user's credits every 2 seconds for up to 30 seconds
+            let creditsAdded = false;
+            const startTime = Date.now();
+            const MAX_POLL_MS = 30000;
+            const POLL_INTERVAL_MS = 2000;
+
+            while (Date.now() - startTime < MAX_POLL_MS) {
+              if (!isMountedRef.current) return;
+              await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+              if (!isMountedRef.current) return;
+
+              try {
+                const res = await fetch("/api/billing/history");
+                if (res.ok) {
+                  const data = await res.json();
+                  if (typeof data.credits === "number" && data.credits > initialCredits) {
+                    if (isMountedRef.current) {
+                      setCredits(data.credits);
+                      if (data.payments) setHistory(data.payments);
+                    }
+                    creditsAdded = true;
+                    break;
+                  }
+                }
+              } catch {
+                // Ignore transient network errors during polling
+              }
+            }
+
+            if (!isMountedRef.current) return;
+
+            await fetchHistory();
+            router.refresh();
+
+            if (creditsAdded) {
+              toast.success("Credits added", { id: toastId });
             } else {
-              alert("Payment verification failed. Please contact support.");
+              toast.info("Payment received, credits will appear shortly", { id: toastId });
             }
           } catch (e) {
-            alert("Error verifying payment.");
+            if (isMountedRef.current) {
+              toast.error("Error verifying payment.", { id: toastId });
+            }
           } finally {
-            setBuyingPlan(null);
+            if (isMountedRef.current) {
+              setBuyingPlan(null);
+            }
           }
         },
         prefill: {

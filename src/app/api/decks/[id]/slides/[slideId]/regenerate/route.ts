@@ -9,9 +9,11 @@ import User from "@/app/models/User";
 import DeckVersion from "@/app/models/DeckVersion";
 import { getSession } from "@/lib/auth";
 import { openai } from "@/lib/openai";
-import { SlideSchema, validateAndSanitizeSourcePage, groundAndSanitizeSlide } from "@/lib/slides-schema";
+import { SlideSchema, formatSourcePage, validateAndSanitizeSourcePage, groundAndSanitizeSlide } from "@/lib/slides-schema";
 import { searchStockImage } from "@/lib/image-search";
 import { getDeckLimiter } from "@/lib/ratelimit"; // Reusing the same limiter
+import { checkOrigin } from "@/lib/csrf";
+import { isValidObjectId, isValidSlideId } from "@/lib/validation";
 
 export const maxDuration = 60;
 const SLIDES_MODEL = process.env.SLIDES_MODEL ?? "gpt-4o-mini";
@@ -20,6 +22,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; slideId: string }> }
 ) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session?.sub) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -35,6 +40,12 @@ export async function POST(
   }
 
   const { id, slideId } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
+  if (!isValidSlideId(slideId)) {
+    return NextResponse.json({ error: "Invalid slide ID." }, { status: 400 });
+  }
   let body;
   try {
     body = await req.json();
@@ -110,13 +121,31 @@ Here is the expected JSON schema:
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const json = JSON.parse(raw);
-    const parsed = SlideSchema.safeParse(json);
+
+    // Match outline section by title or slide index to get deterministic source metadata and talking points
+    const matchedSection =
+      deck.outline?.find((sec: any) => sec.title === existingSlide.sourceSection) ||
+      deck.outline?.[slideIndex];
+
+    const sanitized = groundAndSanitizeSlide(json, deck.sourceText, matchedSection?.points);
+    const parsed = SlideSchema.safeParse(sanitized);
     if (!parsed.success) throw new Error("Parsed schema invalid");
+
+    const sourceSection =
+      existingSlide.sourceSection ||
+      matchedSection?.title ||
+      undefined;
+
+    const sourcePage =
+      formatSourcePage(matchedSection?.pageRange, deck.sourcePageCount) ||
+      formatSourcePage(existingSlide.sourcePage, deck.sourcePageCount) ||
+      undefined;
 
     const newSlide = {
       ...parsed.data,
       id: slideId, // Keep same ID
-      sourcePage: validateAndSanitizeSourcePage(parsed.data.sourcePage, deck.sourcePageCount),
+      sourceSection,
+      sourcePage,
       regenerations: (existingSlide.regenerations ?? 0) + 1,
     };
 
@@ -128,8 +157,8 @@ Here is the expected JSON schema:
       reason: `Regenerate slide: ${instruction.slice(0, 50)}`,
     });
 
-    // Keep only 20 snapshots
-    const versions = await DeckVersion.find({ deckId: id }).sort({ createdAt: 1 }).select("_id");
+    // Keep only 20 snapshots (pinned initial version is never rotated out)
+    const versions = await DeckVersion.find({ deckId: id, pinned: { $ne: true } }).sort({ createdAt: 1 }).select("_id");
     if (versions.length > 20) {
       const toDelete = versions.slice(0, versions.length - 20).map(v => v._id);
       await DeckVersion.deleteMany({ _id: { $in: toDelete } });
@@ -150,12 +179,27 @@ Here is the expected JSON schema:
       }
     }
 
+    const isSourceDeleted = !deck.sourceText || !deck.sourceText.trim();
+    const isStatsOrChart =
+      existingSlide.layout === "stats" ||
+      existingSlide.layout === "chart" ||
+      newSlide.layout === "stats" ||
+      newSlide.layout === "chart";
+
+    const note =
+      isSourceDeleted && isStatsOrChart
+        ? "Source text was deleted, so this slide can't use verified numbers"
+        : undefined;
+
     const groundedSlide = groundAndSanitizeSlide(newSlide, deck.sourceText);
     deck.slides[slideIndex] = groundedSlide;
     deck.markModified(`slides.${slideIndex}`);
     await deck.save();
 
-    return NextResponse.json({ slide: groundedSlide });
+    return NextResponse.json({
+      slide: groundedSlide,
+      ...(note ? { note } : {}),
+    });
   } catch (err) {
     console.error("Regeneration failed:", err);
     return NextResponse.json(

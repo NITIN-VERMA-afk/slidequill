@@ -83,4 +83,30 @@ describe("PPTX Corner Radius & Geometry Export", () => {
     assert.ok(slide1Xml, "Slide 1 XML exists");
     assert.ok(slide1Xml.includes('prst="roundRect"'), "Modern slide 1 should contain roundRect geometry");
   });
+
+  it("merges card background shapes and text into unified shapes in stats and two_column", async () => {
+    const buffer = await buildPptx("Merged Cards Deck", testSlides, "modern", false);
+    const zip = await JSZip.loadAsync(buffer);
+    const slide1Xml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const slide2Xml = await zip.file("ppt/slides/slide2.xml")?.async("string");
+
+    assert.ok(slide1Xml, "Slide 1 XML exists");
+    assert.ok(slide2Xml, "Slide 2 XML exists");
+
+    // Title (1) + 2 merged stat cards (2) = 3 shapes (previously 7 overlapping shapes)
+    const slide1Shapes = slide1Xml.match(/<p:sp>/g) || [];
+    assert.equal(slide1Shapes.length, 3, "Slide 1 should have 3 shapes total (1 title + 2 merged stat cards)");
+
+    // Title (1) + 2 merged column cards (2) = 3 shapes (previously 7 overlapping shapes)
+    const slide2Shapes = slide2Xml.match(/<p:sp>/g) || [];
+    assert.equal(slide2Shapes.length, 3, "Slide 2 should have 3 shapes total (1 title + 2 merged column cards)");
+
+    // Ensure content is intact within merged shapes
+    assert.ok(slide1Xml.includes("99.9%"), "Slide 1 contains stat value");
+    assert.ok(slide1Xml.includes("Uptime SLA"), "Slide 1 contains stat label");
+    assert.ok(slide2Xml.includes("Engineering"), "Slide 2 contains left heading");
+    assert.ok(slide2Xml.includes("Automated testing pipelines"), "Slide 2 contains left bullets");
+    assert.ok(slide2Xml.includes("Security"), "Slide 2 contains right heading");
+  });
 });
+

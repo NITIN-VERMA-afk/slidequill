@@ -8,11 +8,16 @@ import Deck from "@/app/models/Deck";
 import DeckVersion from "@/app/models/DeckVersion";
 import { getSession } from "@/lib/auth";
 import { getDeckLimiter } from "@/lib/ratelimit";
+import { checkOrigin } from "@/lib/csrf";
+import { isValidObjectId } from "@/lib/validation";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const csrfError = checkOrigin(req);
+  if (csrfError) return csrfError;
+
   const session = await getSession();
   if (!session?.sub) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
@@ -20,6 +25,9 @@ export async function POST(
   if (!success) return NextResponse.json({ error: "Rate limit exceeded." }, { status: 429 });
 
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
   await connectDB();
 
   const deck = await Deck.findOne({ _id: id, userId: session.sub });
@@ -37,8 +45,10 @@ export async function POST(
   deck.markModified("slides");
   await deck.save();
 
-  // Delete the snapshot so we can't undo it again (could implement Redo later)
-  await DeckVersion.deleteOne({ _id: latestVersion._id });
+  // Delete unpinned snapshot so we can't undo it again (pinned initial version is preserved)
+  if (!latestVersion.pinned) {
+    await DeckVersion.deleteOne({ _id: latestVersion._id });
+  }
 
   return NextResponse.json({
     message: "Undo successful.",

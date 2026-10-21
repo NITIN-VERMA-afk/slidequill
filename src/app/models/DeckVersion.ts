@@ -6,6 +6,8 @@ export interface IDeckVersion extends Document {
   slides: ISlide[];
   theme: string;
   reason: string;
+  pinned?: boolean;
+  isInitial?: boolean;
   createdAt: Date;
 }
 
@@ -15,6 +17,8 @@ const DeckVersionSchema = new Schema<IDeckVersion>(
     slides: { type: [Schema.Types.Mixed], default: [] } as any,
     theme: { type: String, required: true },
     reason: { type: String, default: "Manual snapshot" },
+    pinned: { type: Boolean, default: false, index: true },
+    isInitial: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

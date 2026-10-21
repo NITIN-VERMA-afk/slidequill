@@ -19,7 +19,7 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get("sq_at")?.value;
   if (token) {
     try {
-      await jwtVerify(token, getSecret());
+      await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
       return true;
     } catch {
       // access token expired, check refresh token
@@ -34,6 +34,19 @@ async function isAuthenticated(req: NextRequest): Promise<boolean> {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Allow public presentation pages, public APIs, and token-authenticated render pages without cookie session
+  if (pathname.startsWith("/p/") || pathname.startsWith("/api/public/") || pathname.startsWith("/render/")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
+
   const authed = await isAuthenticated(request);
 
   // Protected routes → require auth

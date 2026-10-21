@@ -31,7 +31,7 @@ export default function PrivacyPage() {
 
         <h2>3. Data Retention</h2>
         <p>
-          Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your uploaded source text immediately at any time from your deck editor using the &ldquo;Delete source text now&rdquo; button. Generated slide decks are kept until you choose to delete them.
+          Uploaded documents and source text are automatically permanently deleted after 30 days. You can also delete your uploaded source text immediately at any time from your deck editor using the &ldquo;Delete source text now&rdquo; button. The original document filename is retained only as citation metadata for speaker notes and exports. Generated slide decks are kept until you choose to delete them.
         </p>
 
         <h2>4. Your Rights</h2>

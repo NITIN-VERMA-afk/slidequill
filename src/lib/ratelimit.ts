@@ -46,12 +46,36 @@ export function getDeckLimiter() {
   });
 }
 
+let mockExportLimiter: { limit: (k?: string) => Promise<{ success: boolean }> } | null = null;
+let mockPdfDailyLimiter: { limit: (k?: string) => Promise<{ success: boolean }> } | null = null;
+
+export function __setMockExportLimiter(limiter: typeof mockExportLimiter) {
+  mockExportLimiter = limiter;
+}
+
+export function __setMockPdfDailyLimiter(limiter: typeof mockPdfDailyLimiter) {
+  mockPdfDailyLimiter = limiter;
+}
+
 /** 5 exports per minute per user */
 export function getExportLimiter() {
+  if (mockExportLimiter) return mockExportLimiter as unknown as Ratelimit;
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
   return new Ratelimit({
     redis: getRedis(),
     limiter: Ratelimit.slidingWindow(5, "1 m"),
     prefix: "sq:rl:export",
+  });
+}
+
+/** 30 PDF exports per day per user */
+export function getPdfDailyExportLimiter() {
+  if (mockPdfDailyLimiter) return mockPdfDailyLimiter as unknown as Ratelimit;
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(30, "24 h"),
+    prefix: "sq:rl:export:pdf:daily",
   });
 }
 
@@ -90,4 +114,108 @@ export function getUserGenerationLimiter(hasPurchased: boolean) {
     prefix: hasPurchased ? "sq:rl:generate:paid" : "sq:rl:generate:free",
   });
 }
+
+/** 6 outline requests per minute per user */
+export function getOutlineMinuteLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(6, "1 m"),
+    prefix: "sq:rl:outline:min",
+  });
+}
+
+/** 30 outline requests per day per user */
+export function getOutlineDailyLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(30, "24 h"),
+    prefix: "sq:rl:outline:day",
+  });
+}
+
+/** 10 image searches per minute per user */
+export function getImageSearchUserLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
+    prefix: "sq:rl:img:user",
+  });
+}
+
+/** Global Unsplash demo rate limiter: 45 requests per 1 hour to prevent 50/hr demo exhaustion */
+export function getUnsplashGlobalLimiter() {
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(45, "1 h"),
+    prefix: "sq:rl:unsplash:global",
+  });
+}
+
+const fallbackLimiter = {
+  limit: async (_key?: string) => ({
+    success: true,
+    limit: 100,
+    remaining: 99,
+    reset: Date.now() + 60000,
+    pending: Promise.resolve(),
+  }),
+};
+
+function hasRedisConfig(): boolean {
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+/** 60 deck mutations (PATCH/DELETE) per minute per user */
+export function getDeckMutationLimiter() {
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
+    prefix: "sq:rl:deck:mutate",
+  });
+}
+
+let mockReadLimiter: { limit: (k?: string) => Promise<{ success: boolean }> } | null = null;
+let mockMissLimiter: { limit: (k?: string) => Promise<{ success: boolean }> } | null = null;
+
+export function __setMockPublicDeckReadLimiter(limiter: typeof mockReadLimiter) {
+  mockReadLimiter = limiter;
+}
+
+export function __setMockPublicDeckMissLimiter(limiter: typeof mockMissLimiter) {
+  mockMissLimiter = limiter;
+}
+
+/** 60 public deck reads per minute per IP */
+export function getPublicDeckReadLimiter() {
+  if (mockReadLimiter) return mockReadLimiter as unknown as Ratelimit;
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
+    prefix: "sq:rl:public:read",
+  });
+}
+
+/** 20 public deck slug misses (404s) per minute per IP */
+export function getPublicDeckMissLimiter() {
+  if (mockMissLimiter) return mockMissLimiter as unknown as Ratelimit;
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    prefix: "sq:rl:public:miss",
+  });
+}
+
+/** 10 share link mutations per minute per user/IP */
+export function getShareMutationLimiter() {
+  if (!hasRedisConfig()) return fallbackLimiter as unknown as Ratelimit;
+  return new Ratelimit({
+    redis: getRedis(),
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
+    prefix: "sq:rl:share:mutate",
+  });
+}
+
 

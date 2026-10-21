@@ -43,6 +43,7 @@ describe("Refund Safety & Exactly-Once Guarantees (Real In-Memory DB)", () => {
       title: "Quarterly Strategy",
       status: "generating",
       creditCharged: true,
+      creditDeductedAt: new Date(),
       creditRefunded: false,
     });
 
@@ -118,6 +119,7 @@ describe("Refund Safety & Exactly-Once Guarantees (Real In-Memory DB)", () => {
       title: "Finished Presentation",
       status: "ready",
       creditCharged: true,
+      creditDeductedAt: new Date(),
       creditRefunded: false,
     });
 
@@ -150,6 +152,7 @@ describe("Refund Safety & Exactly-Once Guarantees (Real In-Memory DB)", () => {
       title: "High Concurrency Test",
       status: "generating",
       creditCharged: true,
+      creditDeductedAt: new Date(),
       creditRefunded: false,
     });
 

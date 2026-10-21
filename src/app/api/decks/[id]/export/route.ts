@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { getExportLimiter } from "@/lib/ratelimit";
 import { buildPptx } from "@/lib/export/pptx";
 import { trackEvent } from "@/lib/analytics";
+import { isValidObjectId } from "@/lib/validation";
 
 export const maxDuration = 60;
 
@@ -26,6 +27,9 @@ export async function GET(
   }
 
   const { id } = await params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid deck ID." }, { status: 400 });
+  }
   await connectDB();
 
   // Fetch deck
@@ -43,7 +47,7 @@ export async function GET(
   const isFreeUser = user ? !user.hasPurchased : true;
 
   try {
-    const buffer = await buildPptx(deck.title, deck.slides as any[], deck.theme, isFreeUser);
+    const buffer = await buildPptx(deck.title, deck.slides as any[], deck.theme, isFreeUser, deck.sourceName);
 
     // Track analytics event
     void trackEvent("pptx_exported", {

@@ -30,7 +30,10 @@ export async function executeCleanupJob(): Promise<{
   const stuckCutoff = new Date(Date.now() - STUCK_TIMEOUT_MS);
   const stuckDecks = await Deck.find({
     status: { $in: ["outlining", "generating"] },
-    updatedAt: { $lt: stuckCutoff },
+    $or: [
+      { lastProgressAt: { $lt: stuckCutoff } },
+      { lastProgressAt: { $in: [null, undefined] }, updatedAt: { $lt: stuckCutoff } },
+    ],
   }).select("_id userId");
 
   let stuckDecksRecovered = 0;

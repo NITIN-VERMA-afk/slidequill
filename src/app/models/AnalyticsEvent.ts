@@ -7,6 +7,8 @@ export type AnalyticsEventType =
   | "deck_generated"
   | "slide_regenerated"
   | "pptx_exported"
+  | "pdf_exported"
+  | "export"
   | "credit_purchase_started"
   | "credit_purchased"
   | "generation_failed";
