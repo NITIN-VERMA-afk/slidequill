@@ -57,8 +57,8 @@ export default async function DashboardPage() {
 
         {/* Quick Actions */}
         <div className="grid gap-3.5 sm:gap-5 md:grid-cols-2">
-          <div className="group relative overflow-hidden rounded-2xl bg-[#101A3A] p-5 sm:p-6 md:p-7 shadow-md transition-all hover:shadow-xl">
-            <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-white/10 blur-3xl transition-transform group-hover:scale-150" />
+          <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#101A3A] via-[#14234f] to-[#1c306d] p-5 sm:p-6 md:p-7 shadow-lg transition-all hover:shadow-xl border border-white/10">
+            <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-blue-500/25 blur-3xl transition-transform group-hover:scale-150" />
             <div className="relative z-10">
               <div className="mb-3 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-sm">
                 <Plus size={20} />
@@ -71,16 +71,16 @@ export default async function DashboardPage() {
               </p>
               <Link
                 href="/decks/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#2449d6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F5BFF]"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#2449d6] shadow-md shadow-[#2F5BFF]/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F5BFF]"
               >
                 Start now →
               </Link>
             </div>
           </div>
 
-          <div className="group rounded-2xl border border-[#101A3A]/10 bg-white p-5 sm:p-6 md:p-7 shadow-sm transition hover:border-[#2F5BFF]/30 hover:shadow-md flex flex-col justify-between">
+          <div className="group rounded-2xl border border-white/80 bg-white/85 p-5 sm:p-6 md:p-7 shadow-sm backdrop-blur-xl transition hover:border-[#2F5BFF]/30 hover:shadow-md flex flex-col justify-between">
             <div>
-              <div className="mb-3 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-[#F4F6FB] text-[#2F5BFF]">
+              <div className="mb-3 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2F5BFF]">
                 <FolderOpen size={20} />
               </div>
               <h3 className="text-lg sm:text-xl font-extrabold text-[#101A3A] [font-family:var(--font-display)]">
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               >
                 View all decks →
               </Link>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#5a6384] bg-[#F4F6FB] px-2.5 py-1.5 rounded-lg border border-[#101A3A]/5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#5a6384] bg-white/90 px-2.5 py-1.5 rounded-lg border border-[#101A3A]/5 shadow-xs">
                 <Zap size={14} className="text-orange-500" />
                 {user?.credits} Credits left
               </div>
@@ -122,8 +122,8 @@ export default async function DashboardPage() {
 
         <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-4">
           {recentDecks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-[#101A3A]/10 bg-white py-12 sm:py-16 text-center shadow-sm">
-              <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-[#F4F6FB] border border-[#101A3A]/5 shadow-sm">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/80 bg-white/80 py-12 sm:py-16 text-center shadow-sm backdrop-blur-xl">
+              <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-blue-50 text-[#2F5BFF] border border-[#2F5BFF]/10 shadow-xs">
                 <FolderOpen size={26} className="text-[#2F5BFF]" />
               </div>
               <h3 className="mt-4 sm:mt-5 text-lg sm:text-xl font-extrabold text-[#101A3A] [font-family:var(--font-display)]">
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
               </p>
               <Link
                 href="/decks/new"
-                className="mt-5 sm:mt-6 rounded-xl bg-[#101A3A] px-5 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md transition hover:bg-[#1d2c5e] hover:shadow-lg"
+                className="mt-5 sm:mt-6 rounded-xl bg-gradient-to-r from-[#2F5BFF] to-[#4338CA] px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-[#2F5BFF]/25 transition hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
               >
                 Create your first deck
               </Link>

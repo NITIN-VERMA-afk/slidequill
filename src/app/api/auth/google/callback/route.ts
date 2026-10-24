@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const baseUrl = process.env.APP_URL || "http://localhost:3000";
+  let baseUrl = process.env.APP_URL;
+  if (!baseUrl || (process.env.NODE_ENV === "production" && baseUrl.includes("localhost"))) {
+    baseUrl = req.nextUrl.origin;
+  }
   const redirectUri = new URL("/api/auth/google/callback", baseUrl).toString();
 
   if (!clientId || !clientSecret) {

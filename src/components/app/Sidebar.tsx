@@ -112,6 +112,16 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
     first?.focus();
     return () => el.removeEventListener("keydown", trap);
   }, [drawerOpen]);
+  // Prevent background scrolling while mobile drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [drawerOpen]);
 
   const sidebarContent = (isMobile = false) => (
     <nav
@@ -129,7 +139,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       }
     >
       {/* Logo + collapse toggle */}
-      <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
+      <div className="shrink-0 flex h-14 items-center justify-between border-b border-white/10 px-4">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 text-lg font-extrabold tracking-tight [font-family:var(--font-display)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F5BFF]"
@@ -158,7 +168,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       </div>
 
       {/* New deck button */}
-      <div className="px-3 pt-4">
+      <div className="shrink-0 px-3 pt-4">
         <Link
           href="/decks/new"
           className={clsx(
@@ -173,7 +183,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       </div>
 
       {/* Nav items */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-0.5 overscroll-contain">
         {NAV_ITEMS.map(({ href, label, Icon }) => (
           <NavLink
             key={href}
@@ -186,7 +196,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       </div>
 
       {/* Credits card */}
-      <div className="border-t border-white/10 p-3">
+      <div className="shrink-0 border-t border-white/10 p-3">
         <Link
           href="/billing"
           className={clsx(
@@ -229,7 +239,7 @@ export default function Sidebar({ user, drawerOpen, onDrawerClose }: SidebarProp
       <aside
         id="mobile-drawer"
         className={clsx(
-          "fixed inset-y-0 left-0 z-50 h-full md:hidden transition-transform duration-200 ease-out",
+          "fixed inset-y-0 left-0 z-50 h-[100dvh] w-72 max-w-[85vw] md:hidden transition-transform duration-200 ease-out",
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Mobile navigation"

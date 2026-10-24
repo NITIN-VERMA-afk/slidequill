@@ -131,6 +131,7 @@ export default function DeckEditorPage({
   
   const [viewMode, setViewMode] = useState<"outline" | "slides">("outline");
   const [activeSlideIdx, setActiveSlideIdx] = useState<number>(0);
+  const [mobileTab, setMobileTab] = useState<"canvas" | "slides" | "edit" | "chat">("canvas");
   
   // Right Panel Tabs
   const [panelTab, setPanelTab] = useState<"edit" | "chat">("edit");
@@ -1296,142 +1297,149 @@ export default function DeckEditorPage({
   const canGenerate = (deck.status === "outlined" || deck.status === "ready") && outline.length > 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)]">
+    <div className="flex flex-col h-[calc(100dvh-120px)] md:h-[calc(100vh-120px)] min-h-0">
       {/* Header row */}
-      <div className="flex items-start justify-between gap-4 shrink-0 mb-4">
-        <div className="flex-1 flex items-center gap-4">
+      <div className="flex flex-col gap-2.5 shrink-0 mb-3 w-full">
+        {/* Title & Save status */}
+        <div className="flex items-center justify-between gap-2 min-w-0 w-full">
           <input
             type="text"
             value={title}
             title={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={isOutlining || isGenerating}
-            className="w-full max-w-xl truncate text-ellipsis rounded-xl border border-transparent bg-transparent px-2 py-1 text-2xl font-extrabold text-[#101A3A] [font-family:var(--font-display)] outline-none transition hover:border-[#101A3A]/15 focus:border-[#2F5BFF] focus:ring-2 focus:ring-[#2F5BFF]/15 focus:bg-white disabled:opacity-60"
+            className="flex-1 min-w-0 max-w-xl truncate text-ellipsis rounded-xl border border-transparent bg-transparent px-2 py-1 text-xl md:text-2xl font-extrabold text-[#101A3A] [font-family:var(--font-display)] outline-none transition hover:border-[#101A3A]/15 focus:border-[#2F5BFF] focus:ring-2 focus:ring-[#2F5BFF]/15 focus:bg-white disabled:opacity-60"
           />
           {/* Save indicator */}
-          <div className="flex h-8 items-center text-xs text-[#5a6384] w-20">
+          <div className="flex h-8 items-center text-xs text-[#5a6384] shrink-0">
             {saveStatus === "saving" && (
               <span className="flex items-center gap-1.5">
-                <Loader2 size={12} className="animate-spin" /> Saving…
+                <Loader2 size={12} className="animate-spin" /> <span className="hidden sm:inline">Saving…</span>
               </span>
             )}
             {saveStatus === "saved" && (
               <span className="flex items-center gap-1.5 text-emerald-600">
-                <Check size={12} /> Saved
+                <Check size={12} /> <span className="hidden sm:inline">Saved</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Privacy: Source Text Deletion */}
-          {deck.hasSourceText ? (
-            <button
-              onClick={handleDeleteSourceText}
-              disabled={deletingSource || isOutlining}
-              title="Permanently delete uploaded source document text from server now"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#101A3A]/15 bg-white text-xs font-semibold text-[#5a6384] hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition shadow-sm disabled:opacity-50 mr-2"
-            >
-              {deletingSource ? (
-                <Loader2 size={13} className="animate-spin text-red-500" />
-              ) : (
-                <ShieldCheck size={13} className="text-emerald-600" />
-              )}
-              Delete source text now
-            </button>
-          ) : (
-            <span
-              title="Uploaded document and source text have been permanently deleted"
-              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 mr-2"
-            >
-              <ShieldCheck size={12} className="text-emerald-600" /> Source text deleted
-            </span>
-          )}
-
-          {/* View Toggle */}
-          {(deck.status === "outlined" || deck.status === "ready" || isGenerating) && (
-            <div className="flex bg-[#101A3A]/5 p-1 rounded-lg mr-4">
+        {/* Action Controls & Buttons: Wrap cleanly on small screens */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 w-full">
+          {/* Left group: Privacy source text + Outline/Slides toggle */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Privacy: Source Text Deletion */}
+            {deck.hasSourceText ? (
               <button
-                onClick={() => setViewMode("outline")}
-                className={clsx(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition",
-                  viewMode === "outline" ? "bg-white text-[#101A3A] shadow-sm" : "text-[#5a6384]"
-                )}
+                onClick={handleDeleteSourceText}
+                disabled={deletingSource || isOutlining}
+                title="Permanently delete uploaded source document text from server now"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#101A3A]/15 bg-white text-xs font-semibold text-[#5a6384] hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition shadow-sm disabled:opacity-50"
               >
-                <ListOrdered size={16} /> Outline
-              </button>
-              <button
-                onClick={() => setViewMode("slides")}
-                disabled={slides.length === 0 && !isGenerating}
-                className={clsx(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition",
-                  viewMode === "slides" ? "bg-white text-[#101A3A] shadow-sm" : "text-[#5a6384] disabled:opacity-50"
+                {deletingSource ? (
+                  <Loader2 size={13} className="animate-spin text-red-500" />
+                ) : (
+                  <ShieldCheck size={13} className="text-emerald-600" />
                 )}
-              >
-                <PlaySquare size={16} /> Slides
+                <span className="hidden sm:inline">Delete source text now</span>
+                <span className="sm:hidden">Delete text</span>
               </button>
-            </div>
-          )}
+            ) : (
+              <span
+                title="Uploaded document and source text have been permanently deleted"
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200"
+              >
+                <ShieldCheck size={12} className="text-emerald-600" /> <span className="hidden sm:inline">Source text deleted</span><span className="sm:hidden">Deleted</span>
+              </span>
+            )}
 
-          {canGenerate && viewMode === "outline" && (
-            <button
-              onClick={generateSlides}
-              className="flex items-center gap-2 rounded-xl bg-[#101A3A] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d2c5e]"
-            >
-              <Wand2 size={16} /> Generate Slides (1 credit)
-            </button>
-          )}
+            {/* View Toggle */}
+            {(deck.status === "outlined" || deck.status === "ready" || isGenerating) && (
+              <div className="flex bg-[#101A3A]/5 p-1 rounded-lg">
+                <button
+                  onClick={() => setViewMode("outline")}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition",
+                    viewMode === "outline" ? "bg-white text-[#101A3A] shadow-sm" : "text-[#5a6384]"
+                  )}
+                >
+                  <ListOrdered size={15} /> Outline
+                </button>
+                <button
+                  onClick={() => setViewMode("slides")}
+                  disabled={slides.length === 0 && !isGenerating}
+                  className={clsx(
+                    "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition",
+                    viewMode === "slides" ? "bg-white text-[#101A3A] shadow-sm" : "text-[#5a6384] disabled:opacity-50"
+                  )}
+                >
+                  <PlaySquare size={15} /> Slides
+                </button>
+              </div>
+            )}
+          </div>
 
-          {viewMode === "slides" && slides.length > 0 && (
-            <>
+          {/* Right group: Actions (Generate Slides in outline mode, or Export/Present/Share in slides mode) */}
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            {canGenerate && viewMode === "outline" && (
               <button
-              onClick={async () => {
-                if (!deckId || isExporting) return;
-                setIsExporting(true);
-                const toastId = toast.loading("Saving changes and preparing PowerPoint export...");
-                try {
-                  // Ensure export waits for pending speaker notes or canvas saves
-                  if (pendingNotesSaveRef.current) {
-                    await flushPendingNotes();
-                  }
+                onClick={generateSlides}
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#101A3A] px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-[#1d2c5e] transition shadow-md w-full sm:w-auto"
+              >
+                <Wand2 size={15} /> Generate Slides (1 credit)
+              </button>
+            )}
 
-                  let waitAttempts = 0;
-                  while ((activeSaveCountRef.current > 0 || saveStatus === "saving") && waitAttempts < 25) {
-                    await new Promise((r) => setTimeout(r, 200));
-                    waitAttempts++;
-                  }
+            {viewMode === "slides" && slides.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                <button
+                  onClick={async () => {
+                    if (!deckId || isExporting) return;
+                    setIsExporting(true);
+                    const toastId = toast.loading("Saving changes and preparing PowerPoint export...");
+                    try {
+                      // Ensure export waits for pending speaker notes or canvas saves
+                      if (pendingNotesSaveRef.current) {
+                        await flushPendingNotes();
+                      }
 
-                  const res = await fetch(`/api/decks/${deckId}/export`);
-                  if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    throw new Error(data.error || "Failed to export");
-                  }
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  const cd = res.headers.get("Content-Disposition");
-                  let filename = "Presentation.pptx";
-                  if (cd) {
-                    const match = cd.match(/filename="([^"]+)"/);
-                    if (match) filename = match[1];
-                  }
-                  a.download = filename;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  window.URL.revokeObjectURL(url);
-                  toast.success("PowerPoint presentation downloaded!", { id: toastId });
-                } catch (err: any) {
-                  toast.error(err.message || "Failed to export presentation.", { id: toastId });
-                } finally {
-                  setIsExporting(false);
-                }
-              }}
-              disabled={isExporting}
-              className="flex items-center gap-2 rounded-xl bg-[#2F5BFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2548cc] disabled:opacity-60 transition"
-            >
+                      let waitAttempts = 0;
+                      while ((activeSaveCountRef.current > 0 || saveStatus === "saving") && waitAttempts < 25) {
+                        await new Promise((r) => setTimeout(r, 200));
+                        waitAttempts++;
+                      }
+
+                      const res = await fetch(`/api/decks/${deckId}/export`);
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.error || "Failed to export");
+                      }
+                      const blob = await res.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      const cd = res.headers.get("Content-Disposition");
+                      let filename = "Presentation.pptx";
+                      if (cd) {
+                        const match = cd.match(/filename="([^"]+)"/);
+                        if (match) filename = match[1];
+                      }
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success("PowerPoint presentation downloaded!", { id: toastId });
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to export presentation.", { id: toastId });
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  disabled={isExporting}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-[#2F5BFF] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-[#2548cc] disabled:opacity-60 transition shadow-sm"
+                >
               {isExporting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" /> Exporting...
@@ -1518,10 +1526,11 @@ export default function DeckEditorPage({
             >
               <Share2 size={16} className="text-[#2F5BFF]" /> Share
             </button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+    </div>
+  </div>
 
       {/* Status banners */}
       {isOutlining && (
@@ -1664,10 +1673,52 @@ export default function DeckEditorPage({
 
         {/* Slides View */}
         {viewMode === "slides" && (
-          <div className="absolute inset-0 flex gap-6">
+          <div className="absolute inset-0 flex flex-col lg:flex-row lg:gap-6 min-h-0">
+            {/* Mobile Sub-Navigation Tabs */}
+            <div className="lg:hidden flex items-center justify-around bg-white border border-[#101A3A]/10 rounded-xl p-1 mb-2.5 shrink-0 shadow-sm">
+              <button
+                onClick={() => setMobileTab("canvas")}
+                className={clsx(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition",
+                  mobileTab === "canvas" ? "bg-[#2F5BFF] text-white shadow-sm" : "text-[#5a6384] hover:bg-[#F4F6FB]"
+                )}
+              >
+                <PlaySquare size={13} /> Slide
+              </button>
+              <button
+                onClick={() => setMobileTab("slides")}
+                className={clsx(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition",
+                  mobileTab === "slides" ? "bg-[#2F5BFF] text-white shadow-sm" : "text-[#5a6384] hover:bg-[#F4F6FB]"
+                )}
+              >
+                <ListOrdered size={13} /> Slides ({slides.length})
+              </button>
+              <button
+                onClick={() => { setMobileTab("edit"); setPanelTab("edit"); }}
+                className={clsx(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition",
+                  mobileTab === "edit" ? "bg-[#2F5BFF] text-white shadow-sm" : "text-[#5a6384] hover:bg-[#F4F6FB]"
+                )}
+              >
+                <Settings2 size={13} /> Edit
+              </button>
+              <button
+                onClick={() => { setMobileTab("chat"); setPanelTab("chat"); }}
+                className={clsx(
+                  "flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition",
+                  mobileTab === "chat" ? "bg-[#2F5BFF] text-white shadow-sm" : "text-[#5a6384] hover:bg-[#F4F6FB]"
+                )}
+              >
+                <MessageSquare size={13} /> AI Chat
+              </button>
+            </div>
             
             {/* Left Rail: Thumbnails */}
-            <div className="w-56 shrink-0 flex flex-col h-full min-h-0">
+            <div className={clsx(
+              "w-full lg:w-56 shrink-0 flex-col h-full min-h-0 bg-white/70 lg:bg-transparent rounded-2xl lg:rounded-none p-3 lg:p-0 border border-[#101A3A]/10 lg:border-none",
+              mobileTab === "slides" ? "flex" : "hidden lg:flex"
+            )}>
               {/* Accessible Live Region for Reorder Announcements */}
               <div className="sr-only" aria-live="polite" aria-atomic="true">
                 {reorderAnnouncement}
@@ -1701,7 +1752,10 @@ export default function DeckEditorPage({
                         {LAYOUT_OPTIONS.map((item) => (
                           <button
                             key={item.value}
-                            onClick={() => handleAddSlide(item.value)}
+                            onClick={() => {
+                              handleAddSlide(item.value);
+                              setMobileTab("canvas");
+                            }}
                             className="w-full text-left px-3 py-2 text-xs text-[#101A3A] hover:bg-[#F4F6FB] hover:text-[#2F5BFF] transition flex items-center justify-between font-medium group"
                           >
                             <span>{item.label}</span>
@@ -1732,7 +1786,12 @@ export default function DeckEditorPage({
                   )}
                 >
                   <button
-                    onClick={() => slide && setActiveSlideIdx(idx)}
+                    onClick={() => {
+                      if (slide) {
+                        setActiveSlideIdx(idx);
+                        setMobileTab("canvas");
+                      }
+                    }}
                     aria-label={`Slide ${idx + 1} of ${slides.length}: ${slide?.title || "Untitled"}`}
                     className={clsx(
                       "w-full aspect-video rounded-lg overflow-hidden border-2 text-left transition relative block focus-visible:ring-2 focus-visible:ring-[#2F5BFF] focus-visible:outline-none",
@@ -1814,7 +1873,31 @@ export default function DeckEditorPage({
             </div>
 
             {/* Center Canvas */}
-            <div className="flex-1 flex flex-col min-h-0 bg-white/50 rounded-2xl border border-[#101A3A]/10 p-6 relative">
+            <div className={clsx(
+              "flex-1 flex-col min-h-0 bg-white/50 rounded-2xl border border-[#101A3A]/10 p-3 sm:p-6 relative",
+              mobileTab === "canvas" ? "flex" : "hidden lg:flex"
+            )}>
+              {/* Mobile Slide Switcher Controls */}
+              <div className="lg:hidden flex items-center justify-between bg-white border border-[#101A3A]/10 rounded-xl px-3 py-1.5 mb-2.5 shadow-sm shrink-0">
+                <button
+                  onClick={() => setActiveSlideIdx((i) => Math.max(0, i - 1))}
+                  disabled={activeSlideIdx === 0}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[#101A3A] hover:bg-[#F4F6FB] disabled:opacity-30"
+                >
+                  <ChevronLeft size={16} /> Prev
+                </button>
+                <span className="text-xs font-bold text-[#101A3A]">
+                  Slide {activeSlideIdx + 1} of {slides.length}
+                </span>
+                <button
+                  onClick={() => setActiveSlideIdx((i) => Math.min(slides.length - 1, i + 1))}
+                  disabled={activeSlideIdx >= slides.length - 1}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[#101A3A] hover:bg-[#F4F6FB] disabled:opacity-30"
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+
               <div className="flex justify-end mb-4 absolute top-4 right-4 z-10">
                 <button
                   onClick={handleUndo}
@@ -1861,12 +1944,24 @@ export default function DeckEditorPage({
             </div>
 
             {/* Right Panel: Controls & Chat */}
-            <div className="w-80 shrink-0 flex flex-col border border-[#101A3A]/10 rounded-2xl overflow-hidden bg-white shadow-sm">
+            <div className={clsx(
+              "w-full lg:w-80 shrink-0 flex-col border border-[#101A3A]/10 rounded-2xl overflow-hidden bg-white shadow-sm min-h-0",
+              (mobileTab === "edit" || mobileTab === "chat") ? "flex flex-1" : "hidden lg:flex"
+            )}>
               
               {/* Tabs */}
               <div className="flex border-b border-[#101A3A]/10">
                 <button
-                  onClick={() => setPanelTab("edit")}
+                  onClick={() => { setPanelTab("edit"); setMobileTab("edit"); }}
+                  className={clsx(
+                    "flex-1 py-3 text-sm font-semibold border-b-2 transition flex items-center justify-center gap-2",
+                    panelTab === "edit" ? "border-[#2F5BFF] text-[#101A3A]" : "border-transparent text-[#5a6384] hover:text-[#101A3A]"
+                  )}
+                >
+                  <Settings2 size={16} /> Edit
+                </button>
+                <button
+                  onClick={() => { setPanelTab("chat"); setMobileTab("chat"); }}
                   className={clsx(
                     "flex-1 py-3 text-sm font-semibold border-b-2 transition flex items-center justify-center gap-2",
                     panelTab === "edit" ? "border-[#2F5BFF] text-[#101A3A]" : "border-transparent text-[#5a6384] hover:text-[#101A3A]"

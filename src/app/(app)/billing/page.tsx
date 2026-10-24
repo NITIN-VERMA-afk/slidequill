@@ -195,10 +195,10 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] h-full">
+    <div className="flex flex-col flex-1 min-h-full">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       
-      <div className="flex-1">
+      <div className="flex-1 pb-16">
         <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-extrabold text-[#101A3A] [font-family:var(--font-display)]">
@@ -305,7 +305,7 @@ export default function BillingPage() {
       </div>
       </div>
       
-      <footer className="mt-auto border-t border-[#101A3A]/5 pt-8 pb-4 flex flex-wrap items-center justify-between gap-4 text-xs text-[#5a6384]">
+      <footer className="sticky bottom-0 -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-3.5 bg-[#F4F6FB]/90 backdrop-blur-md border-t border-[#101A3A]/10 flex flex-wrap items-center justify-between gap-4 text-xs text-[#5a6384] z-20">
         <span>© {new Date().getFullYear()} Slidequill</span>
         <div className="flex gap-4">
           <Link href="/privacy" className="hover:underline">Privacy</Link>

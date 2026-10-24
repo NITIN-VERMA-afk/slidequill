@@ -158,7 +158,7 @@ export default function DeckCard({ deck, onDelete, onRename }: DeckCardProps) {
   };
 
   return (
-    <div className="group relative flex h-full w-full flex-col justify-between rounded-2xl border border-[#101A3A]/10 bg-white shadow-sm transition hover:border-[#2F5BFF]/30 hover:shadow-md">
+    <div className="group relative flex h-full w-full flex-col justify-between rounded-2xl border border-white/80 bg-white/85 shadow-sm backdrop-blur-md transition hover:border-[#2F5BFF]/30 hover:shadow-md">
       <Link href={`/decks/${deck._id}`} className="flex flex-1 flex-col p-4 sm:p-5 outline-none focus-visible:ring-2 focus-visible:ring-[#2F5BFF] rounded-2xl">
         {/* Fixed Uniform Thumbnail Preview */}
         <div 
