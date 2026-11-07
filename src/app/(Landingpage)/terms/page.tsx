@@ -1,5 +1,7 @@
 import { Metadata } from "next";
 
+const COMPANY_LEGAL_NAME = "Your Company Legal Name";
+
 export const metadata: Metadata = {
   title: "Terms of Service | Slidequill",
 };
@@ -44,8 +46,7 @@ export default function TermsPage() {
 
         <h2>6. Contact</h2>
         <p>
-          {/* TODO: Add company legal name here */}
-          <strong>Legal Entity:</strong> Slidequill Inc.
+          <strong>Legal Entity:</strong> {COMPANY_LEGAL_NAME}
           <br />
           <strong>Email:</strong> nitinvermanv61506@gmail.com
         </p>
