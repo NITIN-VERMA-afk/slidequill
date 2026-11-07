@@ -422,7 +422,7 @@ export function validateAndCleanImageQuery(
   }
 
   // 1. Strip common filler prefixes
-  let cleaned = rawQuery
+  const cleaned = rawQuery
     .trim()
     .replace(/^["']|["']$/g, "")
     .replace(/^(?:(?:a|an)\s+)?(?:photo|picture|image|photograph|shot)\s+of\s+/i, "")

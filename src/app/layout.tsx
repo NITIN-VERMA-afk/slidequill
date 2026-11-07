@@ -18,7 +18,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://slidequill.in";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
   description: "Turn PDF and Word documents into editable PowerPoint presentations with 6 professionally designed templates on SlideQuill.",
   icons: {
@@ -27,7 +30,23 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
     description: "Turn PDF and Word documents into editable PowerPoint presentations with 6 professionally designed templates on SlideQuill.",
-    images: [{ url: "/logo-icon.png" }],
+    url: "/",
+    siteName: "SlideQuill",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SlideQuill — Turn Documents into Editable PowerPoint Decks",
+    description: "Turn PDF and Word documents into editable PowerPoint presentations with 6 professionally designed templates on SlideQuill.",
+    images: ["/og.png"],
   },
 };
 

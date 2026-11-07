@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateOAuthState, setOAuthStateCookie } from "@/lib/cookies";
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
     baseUrl = req.nextUrl.origin;
   }
   const redirectUri = new URL("/api/auth/google/callback", baseUrl).toString();
+
+  const state = generateOAuthState();
   
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", clientId);
@@ -20,6 +23,9 @@ export async function GET(req: NextRequest) {
   authUrl.searchParams.set("scope", "openid email profile");
   authUrl.searchParams.set("access_type", "online");
   authUrl.searchParams.set("prompt", "select_account");
+  authUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(authUrl.toString());
+  const res = NextResponse.redirect(authUrl.toString());
+  setOAuthStateCookie(res.cookies, state);
+  return res;
 }

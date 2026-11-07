@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import User from "@/app/models/User";
 import AdminAuditLog from "@/app/models/AdminAuditLog";
-import { executeAdminCreditGrant } from "../grant-credits/route";
+import { executeAdminCreditGrant } from "@/lib/services/admin-credit-grant";
 
 describe("Admin Grant-Credits Tool & Audit Log (Real In-Memory DB)", () => {
   let mongoServer: MongoMemoryServer;

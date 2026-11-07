@@ -457,7 +457,7 @@ export function switchSlideLayout(
     }
   }
   try {
-    let stashStr = JSON.stringify(stash);
+    const stashStr = JSON.stringify(stash);
     if (stashStr.length > 15000) {
       const keys = Object.keys(stash);
       while (keys.length > 1 && JSON.stringify(stash).length > 15000) {

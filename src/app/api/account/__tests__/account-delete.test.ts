@@ -11,7 +11,8 @@ import User from "@/app/models/User";
 import Deck from "@/app/models/Deck";
 import Session from "@/app/models/Session";
 import Payment from "@/app/models/Payment";
-import { POST, executeAccountDelete } from "../delete/route";
+import { POST } from "../delete/route";
+import { executeAccountDelete } from "@/lib/services/account-delete";
 import { NextRequest } from "next/server";
 
 describe("Account Deletion Route (/api/account/delete)", () => {

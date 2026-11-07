@@ -752,7 +752,7 @@ export function getSectionExcerptForUnpagedDocument(
   });
 
   // Find candidate blocks meeting threshold
-  let candidates = scoredBlocks.filter((sb) => sb.score >= threshold);
+  const candidates = scoredBlocks.filter((sb) => sb.score >= threshold);
 
   if (candidates.length === 0) {
     return undefined;

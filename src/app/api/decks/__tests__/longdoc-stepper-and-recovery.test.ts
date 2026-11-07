@@ -11,9 +11,9 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import Deck from "@/app/models/Deck";
 import User from "@/app/models/User";
-import { executeCleanupJob } from "../../cron/cleanup/route";
-import { processOutlineStep } from "../[id]/outline/route";
-import { getDeckById } from "../[id]/route";
+import { executeCleanupJob } from "@/lib/services/cleanup-job";
+import { processOutlineStep } from "@/lib/services/outline-step";
+import { getDeckById } from "@/lib/services/deck-access";
 import { getDeckLimiter, getUserGenerationLimiter } from "@/lib/ratelimit";
 import { sanitizeSlidePayload, buildFallbackBulletsSlide, groundAndSanitizeSlide } from "@/lib/slides-schema";
 

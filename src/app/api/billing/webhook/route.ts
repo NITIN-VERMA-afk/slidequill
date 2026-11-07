@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
 
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) {
-      console.error("RAZORPAY_WEBHOOK_SECRET is not set");
-      return NextResponse.json({ error: "Webhook config error" }, { status: 500 });
+      console.error("[Razorpay Webhook] RAZORPAY_WEBHOOK_SECRET is unset");
+      return NextResponse.json({ error: "RAZORPAY_WEBHOOK_SECRET is unset" }, { status: 500 });
     }
 
     const expectedSignature = crypto
@@ -25,11 +25,22 @@ export async function POST(req: NextRequest) {
       .update(rawBody)
       .digest("hex");
 
-    if (!crypto.timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature))) {
+    const expectedBuf = Buffer.from(expectedSignature);
+    const signatureBuf = Buffer.from(signature);
+
+    if (
+      expectedBuf.length !== signatureBuf.length ||
+      !crypto.timingSafeEqual(expectedBuf, signatureBuf)
+    ) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    const event = JSON.parse(rawBody);
+    let event: any;
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
 
     if (event.event === "payment.captured") {
       const paymentData = event.payload.payment.entity;
@@ -45,7 +56,7 @@ export async function POST(req: NextRequest) {
         const updatedPayment = await Payment.findOneAndUpdate(
           { _id: payment._id, status: "pending" },
           { $set: { status: "paid", razorpayPaymentId: paymentId } },
-          { new: true }
+          { returnDocument: "after" }
         );
 
         if (updatedPayment) {

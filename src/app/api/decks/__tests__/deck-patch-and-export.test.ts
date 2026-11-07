@@ -9,7 +9,7 @@ import JSZip from "jszip";
 import Deck from "@/app/models/Deck";
 import User from "@/app/models/User";
 import DeckVersion from "@/app/models/DeckVersion";
-import { executeDeckPatch, saveDeckSnapshot } from "../[id]/route";
+import { executeDeckPatch, saveDeckSnapshot } from "@/lib/services/deck-access";
 import { buildPptx } from "@/lib/export/pptx";
 import type { SlideData } from "@/lib/slides-schema";
 import { calculateFittedFontSize, PPTX_WIDTH_POINTS, PPTX_HEIGHT_POINTS, estimateWrappedLines } from "@/lib/layout-constants";

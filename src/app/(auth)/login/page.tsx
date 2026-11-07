@@ -26,7 +26,11 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
 
-  const [serverError, setServerError] = useState<string | null>(searchParams.get("error"));
+  const rawError = searchParams.get("error");
+  const initialError = rawError === "oauth_state"
+    ? "Authentication session expired or invalid. Please try signing in again."
+    : rawError;
+  const [serverError, setServerError] = useState<string | null>(initialError);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 

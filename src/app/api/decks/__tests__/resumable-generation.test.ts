@@ -10,7 +10,7 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import Deck from "@/app/models/Deck";
 import User from "@/app/models/User";
 import { processSlideBatch, executeAtomicRefund } from "../[id]/generate/route";
-import { getDeckById } from "../[id]/route";
+import { getDeckById } from "@/lib/services/deck-access";
 import { openai } from "@/lib/openai";
 
 describe("Resumable Slide Generation & Concurrency Leases (Real In-Memory DB)", () => {

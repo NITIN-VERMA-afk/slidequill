@@ -3,12 +3,30 @@ import { connectDB } from "@/app/lib/db";
 import User from "@/app/models/User";
 import Session from "@/app/models/Session";
 import { signAccessToken } from "@/lib/auth";
-import { generateRefreshToken, hashToken, setAuthCookies } from "@/lib/cookies";
+import {
+  generateRefreshToken,
+  hashToken,
+  setAuthCookies,
+  verifyOAuthState,
+  clearOAuthStateCookie,
+  OAUTH_STATE_COOKIE,
+} from "@/lib/cookies";
 
 export async function GET(req: NextRequest) {
+  const state = req.nextUrl.searchParams.get("state");
+  const storedState = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
+
+  if (!verifyOAuthState(state, storedState)) {
+    const res = NextResponse.redirect(new URL("/login?error=oauth_state", req.url));
+    clearOAuthStateCookie(res.cookies);
+    return res;
+  }
+
   const code = req.nextUrl.searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=Google authentication failed", req.url));
+    const res = NextResponse.redirect(new URL("/login?error=Google authentication failed", req.url));
+    clearOAuthStateCookie(res.cookies);
+    return res;
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -20,7 +38,12 @@ export async function GET(req: NextRequest) {
   const redirectUri = new URL("/api/auth/google/callback", baseUrl).toString();
 
   if (!clientId || !clientSecret) {
-    return NextResponse.json({ error: "Google OAuth is not configured. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET." }, { status: 500 });
+    const res = NextResponse.json(
+      { error: "Google OAuth is not configured. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET." },
+      { status: 500 }
+    );
+    clearOAuthStateCookie(res.cookies);
+    return res;
   }
 
   try {
@@ -40,7 +63,9 @@ export async function GET(req: NextRequest) {
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
       console.error("Google token error:", tokenData);
-      return NextResponse.redirect(new URL("/login?error=Failed to retrieve access token from Google", req.url));
+      const res = NextResponse.redirect(new URL("/login?error=Failed to retrieve access token from Google", req.url));
+      clearOAuthStateCookie(res.cookies);
+      return res;
     }
 
     // Get user info
@@ -50,7 +75,9 @@ export async function GET(req: NextRequest) {
     
     const userData = await userRes.json();
     if (!userData.email) {
-      return NextResponse.redirect(new URL("/login?error=Google account has no email associated", req.url));
+      const res = NextResponse.redirect(new URL("/login?error=Google account has no email associated", req.url));
+      clearOAuthStateCookie(res.cookies);
+      return res;
     }
 
     await connectDB();
@@ -94,10 +121,13 @@ export async function GET(req: NextRequest) {
 
     const res = NextResponse.redirect(new URL("/dashboard", req.url));
     setAuthCookies(res.cookies, accessToken, rawRefresh);
+    clearOAuthStateCookie(res.cookies);
     return res;
 
   } catch (error) {
     console.error("Google callback error:", error);
-    return NextResponse.redirect(new URL("/login?error=An unexpected error occurred during Google Sign-In", req.url));
+    const res = NextResponse.redirect(new URL("/login?error=An unexpected error occurred during Google Sign-In", req.url));
+    clearOAuthStateCookie(res.cookies);
+    return res;
   }
 }

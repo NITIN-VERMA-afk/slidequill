@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import User from "@/app/models/User";
 import Deck from "@/app/models/Deck";
-import { deleteDeckSourceText } from "../[id]/source/route";
+import { deleteDeckSourceText } from "@/lib/services/deck-source";
 
 describe("Source Text Deletion Logic (deleteDeckSourceText)", () => {
   let mongoServer: MongoMemoryServer;

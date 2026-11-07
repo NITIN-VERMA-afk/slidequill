@@ -9,7 +9,8 @@ import { NextRequest } from "next/server";
 import Deck from "@/app/models/Deck";
 import User from "@/app/models/User";
 import AuthToken from "@/app/models/AuthToken";
-import { GET as cronCleanup, executeCleanupJob } from "../cleanup/route";
+import { GET as cronCleanup } from "../cleanup/route";
+import { executeCleanupJob } from "@/lib/services/cleanup-job";
 
 describe("Cron Cleanup Safety & Retention (GET /api/cron/cleanup)", () => {
   let mongoServer: MongoMemoryServer;

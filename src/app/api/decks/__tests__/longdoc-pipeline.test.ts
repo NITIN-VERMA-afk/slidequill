@@ -7,8 +7,8 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import Deck from "@/app/models/Deck";
 import User from "@/app/models/User";
-import { executeCleanupJob } from "../../cron/cleanup/route";
-import { deleteDeckSourceText } from "../[id]/source/route";
+import { executeCleanupJob } from "@/lib/services/cleanup-job";
+import { deleteDeckSourceText } from "@/lib/services/deck-source";
 import { executeAtomicRefund } from "../[id]/generate/route";
 import { extractText } from "@/lib/extract";
 

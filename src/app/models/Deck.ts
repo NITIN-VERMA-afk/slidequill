@@ -259,6 +259,8 @@ const DeckSchema = new Schema<IDeck>(
 );
 
 DeckSchema.index({ "share.slug": 1 }, { unique: true, sparse: true });
+DeckSchema.index({ userId: 1, createdAt: -1 });
+DeckSchema.index({ status: 1, lastProgressAt: 1 });
 
 const Deck = models.Deck ?? model<IDeck>("Deck", DeckSchema);
 export default Deck;

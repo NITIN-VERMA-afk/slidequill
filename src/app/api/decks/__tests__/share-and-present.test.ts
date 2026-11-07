@@ -13,7 +13,7 @@ import { GET as publicDeckGet } from "@/app/api/public/decks/[slug]/route";
 import { proxy } from "@/proxy";
 import { buildPublicDeckPayload, generateShareSlug, toPublicSlide } from "@/lib/share";
 import { signAccessToken, __setMockHeaders } from "@/lib/auth";
-import { executeAccountDelete } from "@/app/api/account/delete/route";
+import { executeAccountDelete } from "@/lib/services/account-delete";
 import { generateMetadata } from "@/app/p/[slug]/page";
 import { __setMockPublicDeckReadLimiter, __setMockPublicDeckMissLimiter } from "@/lib/ratelimit";
 
